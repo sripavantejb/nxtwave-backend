@@ -4,6 +4,7 @@ import cors from 'cors';
 import { connectToDatabase } from './config/db.js';
 import topicRoutes from './routes/topicRoutes.js';
 import quizRoutes from './routes/quizRoutes.js';
+import flashcardRoutes from './routes/flashcardRoutes.js';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -18,6 +19,7 @@ app.get('/api/health', (_req, res) => {
 // API routes (MVC)
 app.use('/api', topicRoutes);
 app.use('/api', quizRoutes);
+app.use('/api/flashcards', flashcardRoutes);
 
 // Not found handler
 app.use((_req, res) => {
@@ -25,14 +27,19 @@ app.use((_req, res) => {
 });
 
 async function start() {
+  // Start the HTTP server first
+  app.listen(PORT, () => {
+    console.log(`SmartQuiz backend listening on http://localhost:${PORT}`);
+  });
+
+  // Try to connect to database (non-blocking)
   try {
     await connectToDatabase();
-    app.listen(PORT, () => {
-      console.log(`SmartQuiz backend listening on http://localhost:${PORT}`);
-    });
+    console.log('Database connected successfully');
   } catch (err) {
-    console.error('Failed to start server:', err);
-    process.exit(1);
+    console.error('Warning: Failed to connect to database:', err.message);
+    console.error('Server is running but database operations will fail');
+    // Don't exit - allow server to run so we can debug
   }
 }
 

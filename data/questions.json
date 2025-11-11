@@ -17,6 +17,12 @@
       "name": "Profit and Loss",
       "description": "Calculations involving Cost Price (CP), Selling Price (SP), Profit, Loss, and percentages.",
       "hint": "Profit = SP - CP (when SP > CP), Loss = CP - SP (when CP > SP). Profit% = (Profit/CP) × 100."
+    },
+    {
+      "id": "si-ci",
+      "name": "Simple Interest & Compound Interest",
+      "description": "Master Simple Interest and Compound Interest calculations. Learn formulas, solve real-world problems, and understand the key differences.",
+      "hint": "SI uses $SI=\\dfrac{P\\times T\\times R}{100}$. CI uses $A=P\\left(1+\\dfrac{R}{100}\\right)^T$."
     }
   ],
   "questions": [

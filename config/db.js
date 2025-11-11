@@ -13,17 +13,35 @@ export async function connectToDatabase() {
     return db;
   }
 
+  if (!MONGO_URI) {
+    throw new Error('MONGO_URI is not set in environment variables');
+  }
+
+  // Minimal connection options to work around Node.js v22 SSL/TLS issues
   client = new MongoClient(MONGO_URI, {
-    serverApi: {
-      version: ServerApiVersion.v1,
-      strict: true,
-      deprecationErrors: true
-    }
+    // Connection timeout
+    connectTimeoutMS: 30000,
+    serverSelectionTimeoutMS: 30000,
+    // Retry options
+    retryWrites: true,
+    retryReads: true
+    // Don't explicitly set TLS - let driver and URI handle it
   });
 
-  await client.connect();
-  db = client.db(DB_NAME);
-  return db;
+  try {
+    await client.connect();
+    // Test the connection
+    await client.db('admin').command({ ping: 1 });
+    db = client.db(DB_NAME);
+    return db;
+  } catch (error) {
+    // Close the client if connection fails
+    if (client) {
+      await client.close().catch(() => {});
+      client = null;
+    }
+    throw error;
+  }
 }
 
 export function getDb() {

@@ -5,7 +5,11 @@ export async function getTopics(_req, res) {
     const topics = await findAllTopics();
     res.json(topics);
   } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch topics' });
+    console.error('Error fetching topics:', err);
+    res.status(500).json({ 
+      error: 'Failed to fetch topics',
+      message: err.message || 'Database connection error'
+    });
   }
 }
 
