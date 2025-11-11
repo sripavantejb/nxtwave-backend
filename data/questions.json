@@ -30,304 +30,163 @@
       "id": "si-e-1",
       "topicId": "si",
       "difficulty": "easy",
-      "question": "Do you remember the formula for calculating Simple Interest?",
-      "options": [
-        "$SI=\\dfrac{P\\times T\\times R}{100}$",
-        "$SI=P+R+T$",
-        "$SI=\\dfrac{P}{R\\times T}$",
-        "$SI=\\dfrac{R}{P\\times T}$"
-      ],
-      "answerIndex": 0,
-      "explanation": "The correct formula is $SI=\\dfrac{P\\times T\\times R}{100}$."
-    },
-    {
-      "id": "si-e-2",
-      "topicId": "si",
-      "difficulty": "easy",
-      "question": "If the principal is ₹1000, rate is 10% and time is 2 years, what is the Simple Interest?",
+      "question": "If the principal amount is ₹1000, the rate of interest is 10%, and the time period is 2 years, what is SI?",
       "options": ["₹200", "₹250", "₹100", "₹150"],
       "answerIndex": 0,
-      "explanation": "Use $SI=\\dfrac{P\\times T\\times R}{100}=\\dfrac{1000\\times2\\times10}{100}=₹200$."
-    },
-    {
-      "id": "si-e-3",
-      "topicId": "si",
-      "difficulty": "easy",
-      "question": "Find SI for ₹1500 at 7% p.a. for 1 year.",
-      "options": ["₹105", "₹100", "₹95", "₹90"],
-      "answerIndex": 0,
-      "explanation": "$SI=\\dfrac{1500\\times1\\times7}{100}=₹105$."
-    },
-    {
-      "id": "si-e-4",
-      "topicId": "si",
-      "difficulty": "easy",
-      "question": "Time is given in months. For SI, convert to years. 18 months equals how many years?",
-      "options": ["1.5 years", "1.8 years", "1.25 years", "1 year"],
-      "answerIndex": 0,
-      "explanation": "18 months = 18/12 = 1.5 years."
+      "explanation": "The formula for finding SI is $\\dfrac{PTR}{100}$, where $P,T,$ and $R$ are principal amount, time period, and rate of interest, respectively.\\n\\nHere,\\n\\n$P=₹1000$\\n\\n$T=2$ years\\n\\n$R=10\\%$.\\n\\nThen, $SI=\\dfrac{PTR}{100}=\\dfrac{1000\\times 2\\times 10}{100}=200$.\\n\\nTherefore, SI = ₹200."
     },
     {
       "id": "si-m-1",
       "topicId": "si",
       "difficulty": "medium",
-      "question": "Find the SI if ₹1500 is deposited for 80 days at 7.3% p.a. (use 365 days).",
-      "options": ["₹21", "₹24", "₹25", "₹27"],
-      "answerIndex": 1,
-      "explanation": "$SI=\\dfrac{P\\times T\\times R}{365\\times100}=\\dfrac{1500\\times80\\times7.3}{365\\times100}=₹24$."
-    },
-    {
-      "id": "si-m-2",
-      "topicId": "si",
-      "difficulty": "medium",
-      "question": "A sum becomes ₹4400 in 2 years and ₹5000 in 5 years at SI. What is the rate p.a.?",
-      "options": ["4%", "5%", "6%", "7%"],
-      "answerIndex": 1,
-      "explanation": "3-year interest = 5000-4400=600 ⇒ 1-year interest=200. Principal=4400-400=4000. So $200=\\dfrac{4000\\times R}{100}$ ⇒ R=5%."
+      "question": "Find the SI, if an amount of ₹1500 is deposited for 80 days on a scheme that offers a rate of interest of 7.3% per annum.",
+      "options": ["₹25", "₹21", "₹24", "₹27"],
+      "answerIndex": 2,
+      "explanation": "The formula for finding SI is $\\dfrac{PTR}{100}$, where $P,T,$ and $R$ are principal amount, time period, and rate of interest, respectively.\\n\\nHere, the time period is given in days, and the rate of interest is in terms of per annum. Then, the formula for finding SI will be :\\n\\n$SI=\\dfrac{PTR}{365\\times 100}$.\\n\\nNow,\\n\\n$P=₹1500$\\n\\n$T=80$ days\\n\\n$R=7.3\\%$.\\n\\nThen,\\n\\n$SI=\\dfrac{PTR}{365\\times 100}=\\dfrac{1500\\times80\\times7.3}{365\\times100}=₹24$.\\n\\nTherefore, the SI earned is ₹24."
     },
     {
       "id": "si-h-1",
       "topicId": "si",
       "difficulty": "hard",
-      "question": "At SI, a sum doubles in 8 years. In how many years will it triple?",
-      "options": ["16 years", "24 years", "20 years", "12 years"],
-      "answerIndex": 0,
-      "explanation": "If it doubles in 8 years, r=12.5% p.a. For tripling, need interest=2P ⇒ t=2/0.125=16 years."
-    },
-    {
-      "id": "si-h-2",
-      "topicId": "si",
-      "difficulty": "hard",
-      "question": "The SI on a sum of money for 2 years at 12% p.a. is ₹960. Find the principal.",
-      "options": ["₹4000", "₹3500", "₹5000", "₹4800"],
-      "answerIndex": 0,
-      "explanation": "$SI=\\dfrac{P\\times2\\times12}{100}=0.24P=960 \\Rightarrow P=4000$."
-    },
-    {
-      "id": "si-h-3",
-      "topicId": "si",
-      "difficulty": "hard",
-      "question": "A sum amounts to ₹5300 in 3 years and ₹5800 in 5 years at the same SI rate. Find the principal.",
-      "options": ["₹3800", "₹4000", "₹4200", "₹4550"],
-      "answerIndex": 3,
-      "explanation": "2-year interest = 5800-5300=500 ⇒ 1-year interest=250 ⇒ 3-year interest=750 ⇒ Principal = 5300-750=₹4550."
-    },
-    {
-      "id": "si-h-4",
-      "topicId": "si",
-      "difficulty": "hard",
-      "question": "If the SI on a sum for 4 years at 9% p.a. is ₹1440, find the amount at the end.",
-      "options": ["₹5440", "₹5000", "₹4000", "₹4800"],
-      "answerIndex": 0,
-      "explanation": "$SI=\\dfrac{P\\times4\\times9}{100}=0.36P=1440 \\Rightarrow P=4000$. Amount = 4000+1440=₹5440."
+      "question": "A sum becomes ₹4400 in 2 years and ₹5000 in 5 years. Then, what will be rate of interest?",
+      "options": ["4%", "5%", "6%", "7%"],
+      "answerIndex": 1,
+      "explanation": "Given that, the sum becomes ₹4400 in 2 years and ₹5000 in years.\\n\\nThen, the interest obtained for 3 years $= 5000 - 4400 = ₹600$.\\n\\nThat is, the interest for 1 year $=\\dfrac{600}{3}=₹200$.\\n\\nNow, we know that the sum becomes ₹4400 in 2 years, and ₹200 will be the interest on the principal amount for 1 year.\\n\\nThen, the interest for 2 years $=200+200=₹400$.\\n\\nNow, the principal amount$=4400-400=₹4000$.\\n\\nNow, use the formula for SI with $P=₹4000,T=1$year, and $R$ as the rate of interest.\\n\\n$SI=\\dfrac{PTR}{100}$.\\n\\n$200=\\dfrac{4000\\times 1\\times R}{100}$\\n\\n$R=5\\%$.\\n\\nThat is, the rate of interest, $R=5\\%$."
     },
     {
       "id": "ci-e-1",
       "topicId": "ci",
       "difficulty": "easy",
-      "question": "What is the formula for calculating Compound Interest Amount?",
-      "options": [
-        "$A=P\\left(1+\\dfrac{R}{100}\\right)^T$",
-        "$A=P+R+T$",
-        "$A=\\dfrac{P\\times R\\times T}{100}$",
-        "$A=P\\times R\\times T$"
-      ],
-      "answerIndex": 0,
-      "explanation": "The correct formula for compound interest is $A=P\\left(1+\\dfrac{R}{100}\\right)^T$, where A is amount, P is principal, R is rate, and T is time."
-    },
-    {
-      "id": "ci-e-2",
-      "topicId": "ci",
-      "difficulty": "easy",
-      "question": "Find the compound interest on ₹1000 at 10% p.a. for 2 years.",
-      "options": ["₹210", "₹200", "₹220", "₹250"],
-      "answerIndex": 0,
-      "explanation": "$A=1000\\left(1+\\dfrac{10}{100}\\right)^2=1000\\times1.1^2=₹1210$. So CI = 1210 - 1000 = ₹210."
-    },
-    {
-      "id": "ci-e-3",
-      "topicId": "ci",
-      "difficulty": "easy",
-      "question": "Calculate the amount on ₹5000 at 8% p.a. for 2 years compounded annually.",
-      "options": ["₹5832", "₹5800", "₹5900", "₹6000"],
-      "answerIndex": 0,
-      "explanation": "$A=5000\\left(1+\\dfrac{8}{100}\\right)^2=5000\\times1.08^2=5000\\times1.1664=₹5832$."
-    },
-    {
-      "id": "ci-e-4",
-      "topicId": "ci",
-      "difficulty": "easy",
-      "question": "What is the difference between Simple Interest and Compound Interest?",
-      "options": [
-        "SI is on principal only, CI is on principal + interest",
-        "They are the same",
-        "SI is always more than CI",
-        "CI uses a simpler formula"
-      ],
-      "answerIndex": 0,
-      "explanation": "Simple Interest is calculated only on the principal, while Compound Interest is calculated on principal plus accumulated interest."
+      "question": "If the principal amount is ₹5000, the rate of interest is 20%, and the time period is 2 years, what is CI?",
+      "options": ["₹2300", "₹2000", "₹2100", "₹2200"],
+      "answerIndex": 3,
+      "explanation": "The formula for finding CI is $P\\left(1+\\dfrac{R}{100}\\right)^T-P$, where $P,T,$ and $R$ are principal amount, time period, and rate of interest, respectively.\\n\\nGiven that, \\n\\n$P=₹5000$\\n\\n$T=2$ years\\n\\n$R=20\\%$.\\n\\nThen,\\n\\n$\\begin{aligned}\\nCI&=P\\left(1+\\dfrac{R}{100}\\right)^T-P\\\\\\n&=5000\\left(1+\\dfrac{20}{100}\\right)^2-5000\\\\\\n&=5000\\times\\left(\\dfrac{6}{5}\\right)^2-5000\\\\\\n&=7200-5000\\\\\\n&=₹2200.\\n\\n\\end{aligned}$\\n\\nTherefore, the $CI=₹2200.$"
     },
     {
       "id": "ci-m-1",
       "topicId": "ci",
       "difficulty": "medium",
-      "question": "Find CI on ₹8000 at 15% p.a. for 2 years compounded annually.",
-      "options": ["₹2580", "₹2400", "₹2500", "₹2700"],
+      "question": "An amount of ₹10000 at 8% per annum. If the interest is compounded half-yearly, then what is the total interest earned by at the end of  first year?",
+      "options": ["₹816", "₹810", "₹820", "₹815"],
       "answerIndex": 0,
-      "explanation": "$A=8000\\left(1+\\dfrac{15}{100}\\right)^2=8000\\times1.15^2=8000\\times1.3225=₹10580$. CI = 10580 - 8000 = ₹2580."
-    },
-    {
-      "id": "ci-m-2",
-      "topicId": "ci",
-      "difficulty": "medium",
-      "question": "A sum amounts to ₹6655 in 3 years at 10% p.a. CI. Find the principal.",
-      "options": ["₹5000", "₹5500", "₹4800", "₹5200"],
-      "answerIndex": 0,
-      "explanation": "$6655=P\\left(1.1\\right)^3=P\\times1.331 \\Rightarrow P=\\dfrac{6655}{1.331}=₹5000$."
-    },
-    {
-      "id": "ci-m-3",
-      "topicId": "ci",
-      "difficulty": "medium",
-      "question": "Calculate CI when interest is compounded half-yearly: ₹4000 at 10% p.a. for 1 year.",
-      "options": ["₹410", "₹400", "₹420", "₹450"],
-      "answerIndex": 0,
-      "explanation": "Half-yearly rate = 5%, periods = 2. $A=4000\\left(1.05\\right)^2=4000\\times1.1025=₹4410$. CI = 4410 - 4000 = ₹410."
+      "explanation": "If interest is compounded half-yearly, then the interest is calculated every 6 months.  \\n\\nThat is, rate of interest $= \\dfrac{8}{2}= 4\\%$ (because the given rate of interest is $8\\%$ per annum).  \\n \\nAmount after 6 months $= 10,000 +4\\%$ of $10,000$ \\n$=₹10,400$.  \\nAmount after 1 year $= 10,400 +4\\%$ of $10,400$\\n$= ₹10816$.  \\nThen, the interest earned $=10816-10000=₹816$."
     },
     {
       "id": "ci-h-1",
       "topicId": "ci",
       "difficulty": "hard",
-      "question": "At what rate will ₹2000 amount to ₹2662 in 3 years at CI compounded annually?",
-      "options": ["10%", "12%", "15%", "8%"],
-      "answerIndex": 0,
-      "explanation": "$2662=2000\\left(1+\\dfrac{R}{100}\\right)^3 \\Rightarrow \\left(1+\\dfrac{R}{100}\\right)^3=1.331=1.1^3 \\Rightarrow R=10\\%$."
+      "question": "A sum of ₹5000 will amount to ₹8640 in 3 years, if the interest is calculated annually. Then, the rate of compound interest is:",
+      "options": ["25%", "20%", "15%", "30%"],
+      "answerIndex": 1,
+      "explanation": "Amount compounted for $T$ years at a rate of interest of $R\\%$ is $P\\left(1+\\dfrac{R}{100}\\right)^T$.\\n\\nGiven that,\\n\\n$\\begin{aligned}\\n8640&=5000\\left(1+\\dfrac{R}{100}\\right)^3\\\\\\n\\dfrac{8640}{5000}&=\\left(1+\\dfrac{R}{100}\\right)^3\\\\\\n\\dfrac{\\sqrt[3]{216}}{\\sqrt[3]{125}}&=\\left(1+\\dfrac{R}{100}\\right)\\\\\\n\\dfrac{6}{5}-1&=\\dfrac{R}{100}\\implies R=20\\%.\\n\\end{aligned}$\\n\\nTherefore, the rate of interest is $20\\%$."
     },
     {
-      "id": "ci-h-2",
-      "topicId": "ci",
-      "difficulty": "hard",
-      "question": "The difference between CI and SI on ₹4000 for 2 years at 10% p.a. is:",
-      "options": ["₹40", "₹50", "₹60", "₹80"],
-      "answerIndex": 0,
-      "explanation": "SI = 4000×0.1×2 = ₹800. CI: A=4000×1.1²=4840, CI=840. Difference = 840-800 = ₹40."
+      "id": "si-ci-e-1",
+      "topicId": "si-ci",
+      "difficulty": "easy",
+      "question": "By how much does CI exceed SI on ₹3000 at 10% for 2 years?",
+      "options": ["₹20", "₹25", "₹30", "₹35"],
+      "answerIndex": 2,
+      "explanation": "$SI=\\dfrac{PTR}{100}=\\dfrac{3000\\times2\\times 10}{100}=₹600$.\\n\\n$CI=P\\left(1+\\dfrac{R}{100}\\right)^T-P=3000(1.1)^2-3000=₹630$.\\n\\nDifference $=CI-SI=630-600=₹30$."
     },
     {
-      "id": "ci-h-3",
-      "topicId": "ci",
-      "difficulty": "hard",
-      "question": "A sum becomes ₹13310 in 2 years and ₹14641 in 3 years at CI. Find the rate.",
-      "options": ["10%", "12%", "8%", "15%"],
-      "answerIndex": 0,
-      "explanation": "Interest for 1 year = 14641-13310=1331. Rate = (1331/13310)×100 = 10%."
+      "id": "si-ci-m-1",
+      "topicId": "si-ci",
+      "difficulty": "medium",
+      "question": "If the simple interest is 12% annually and the compound interest is 10% annually, find the difference between the interests after 3 years on a sum of ₹4000.",
+      "options": ["₹128", "₹122", "₹130", "₹126"],
+      "answerIndex": 3,
+      "explanation": "$SI=\\dfrac{PTR}{100}=\\dfrac{4000\\times3\\times 12}{100}=₹1440$.\\n\\n$CI=P\\left(1+\\dfrac{R}{100}\\right)^T-P=4000(1.1)^3-4000=₹1324$.\\n\\nDifference $=1440-1324=₹126$."
     },
     {
-      "id": "ci-h-4",
-      "topicId": "ci",
+      "id": "si-ci-h-1",
+      "topicId": "si-ci",
       "difficulty": "hard",
-      "question": "Find the CI on ₹10000 at 20% p.a. for 1.5 years compounded half-yearly.",
-      "options": ["₹3310", "₹3000", "₹3200", "₹3500"],
-      "answerIndex": 0,
-      "explanation": "Half-yearly rate = 10%, periods = 3. $A=10000\\times(1.1)^3=10000\\times1.331=₹13310$. CI = 13310-10000 = ₹3310."
+      "question": "The difference between the compound interest and the simple interest on a certain sum at 12% per annum for two years is ₹810. What is the principal amount?",
+      "options": ["₹13000", "₹12500", "₹12000", "₹13500"],
+      "answerIndex": 1,
+      "explanation": "Given that, the difference between the compound interest and the simple interest at 12% per annum on a certain sum for a time period of 2 years is ₹810.\\n\\nLet $P$ be the principal amount. Then, $R=12\\%$ and $T=2$ years.\\n\\n$SI=\\dfrac{PTR}{100}=\\dfrac{2\\times12 P}{100}=\\dfrac{6P}{25}$\\n\\n$\\begin{aligned}\\nCI&=P\\left(\\left(1+\\dfrac{R}{100}\\right)^T-1\\right)\\\\\\n&=P\\left(\\left(1+\\dfrac{12}{100}\\right)^2-1\\right)\\\\\\n&=P\\left(\\dfrac{6}{25}+\\dfrac{3^2}{25^2}\\right).\\n\\end{aligned}$\\n\\nThen,\\n\\n$810=CI - SI = \\dfrac{9P}{625}$ \\n\\n$20=\\dfrac{P}{625}\\implies P=₹12500$.\\n\\nTherefore, the principal amount, $P=₹12500$."
     },
     {
       "id": "pl-e-1",
       "topicId": "profit-loss",
       "difficulty": "easy",
-      "question": "If CP = ₹500 and SP = ₹600, what is the profit?",
-      "options": ["₹100", "₹50", "₹150", "₹200"],
-      "answerIndex": 0,
-      "explanation": "Profit = SP - CP = 600 - 500 = ₹100."
-    },
-    {
-      "id": "pl-e-2",
-      "topicId": "profit-loss",
-      "difficulty": "easy",
-      "question": "If CP = ₹800 and SP = ₹700, what is the loss?",
-      "options": ["₹100", "₹50", "₹150", "₹200"],
-      "answerIndex": 0,
-      "explanation": "Loss = CP - SP = 800 - 700 = ₹100."
-    },
-    {
-      "id": "pl-e-3",
-      "topicId": "profit-loss",
-      "difficulty": "easy",
-      "question": "Find the profit percentage if CP = ₹400 and Profit = ₹100.",
-      "options": ["25%", "20%", "30%", "40%"],
-      "answerIndex": 0,
-      "explanation": "Profit% = $\\dfrac{Profit}{CP}\\times100=\\dfrac{100}{400}\\times100=25\\%$."
-    },
-    {
-      "id": "pl-e-4",
-      "topicId": "profit-loss",
-      "difficulty": "easy",
-      "question": "What is the selling price if CP = ₹1000 and profit is 10%?",
-      "options": ["₹1100", "₹1200", "₹900", "₹1050"],
-      "answerIndex": 0,
-      "explanation": "SP = CP + Profit = 1000 + (10% of 1000) = 1000 + 100 = ₹1100."
+      "question": "A shopkeeper bought a book for Rs.20 and sold it for Rs.25. What is the profit or loss the shopkeeper made?",
+      "options": ["10", "15", "5", "0"],
+      "answerIndex": 2,
+      "explanation": "Given, CP = 20 and SP = 25\\n\\nAs we know, \\n\\nProfit = SP - CP \\n\\nProfit = 25 - 20 = 5\\n\\nHence, shopkeeper made profit of  Rs. 5."
     },
     {
       "id": "pl-m-1",
       "topicId": "profit-loss",
       "difficulty": "medium",
-      "question": "A shopkeeper sells an article at 20% profit. If CP was ₹500, find SP.",
-      "options": ["₹600", "₹550", "₹650", "₹700"],
-      "answerIndex": 0,
-      "explanation": "SP = CP × (1 + Profit%/100) = 500 × 1.2 = ₹600."
-    },
-    {
-      "id": "pl-m-2",
-      "topicId": "profit-loss",
-      "difficulty": "medium",
-      "question": "An article is sold at ₹360 resulting in 20% loss. What was the CP?",
-      "options": ["₹450", "₹400", "₹480", "₹500"],
-      "answerIndex": 0,
-      "explanation": "SP = CP × (1 - Loss%/100). 360 = CP × 0.8 ⇒ CP = 360/0.8 = ₹450."
-    },
-    {
-      "id": "pl-m-3",
-      "topicId": "profit-loss",
-      "difficulty": "medium",
-      "question": "If selling price is doubled, profit becomes tripled. Find the original profit percentage.",
-      "options": ["100%", "50%", "75%", "150%"],
-      "answerIndex": 0,
-      "explanation": "Let CP=x, SP=y, Profit=y-x. New SP=2y, New Profit=2y-x=3(y-x) ⇒ y=2x. Original Profit% = (x/x)×100 = 100%."
+      "question": "A person bought a Bag from the shopkeeper for Rs.50, which cost the shopkeeper Rs.25. How much extra does an extra person is paying compared to the original cost price in percentage?",
+      "options": ["150%", "125%", "200%", "100%"],
+      "answerIndex": 3,
+      "explanation": "Given, SP = 50, and CP = 25\\n\\nThe extra money person is spending is profit to shopkeeper\\n\\nProfit = SP - CP \\n\\nProfit = 50 - 25 = 25\\n\\nIn percentage, Profit = $\\dfrac{25}{25} \\times 100$ = 100%\\n\\nHence, the person is paying 100% extra on original cost price."
     },
     {
       "id": "pl-h-1",
       "topicId": "profit-loss",
       "difficulty": "hard",
-      "question": "A trader marks goods 40% above CP and gives 20% discount. Find profit%.",
-      "options": ["12%", "10%", "15%", "20%"],
+      "question": "Ravi sold his old vehicle to his friend for a 20% profit. The car cost Ravi Rs.1570, so what is the price Ravi's friend paid for the car?",
+      "options": ["1547", "1884", "1184", "1574"],
+      "answerIndex": 1,
+      "explanation": "Given, Profit % = 20% and CP = 1570\\n\\nWe know, Profit = SP - CP \\quad \\to (1)\\n\\n$\\text{Profit \\%} = \\dfrac{\\text{Profit}}{\\text{CP}} \\times 100 \\Rightarrow \\text{Profit} = \\dfrac{\\text{Profit\\%} \\times \\text{CP}}{100}$ \\n\\nProfit = $\\dfrac{20 \\times 1570}{100}$ = 314\\n\\nNow substitute Profit values in the Eq (1)\\n\\n314 = SP - 1570\\n\\n SP = 314 + 1570 = 1884\\n\\n Hence, Ravi paid for the car price of Rs.1884 ."
+    },
+    {
+      "id": "pl-e-2",
+      "topicId": "profit-loss",
+      "difficulty": "easy",
+      "question": "Vivek bought a book at a marked price of Rs.X, which cost the shopkeeper Rs.12. What is the marked price if the profit for the shopkeeper on CP is 25% and it was sold for Rs.5 less than the marked price?",
+      "options": ["47", "50", "48", "49"],
       "answerIndex": 0,
-      "explanation": "Let CP=100. Marked Price=140. SP=140×0.8=112. Profit%=(12/100)×100=12%."
+      "explanation": "Given, CP = 12, Profit% = 250% and Discount =  Rs.5\\n\\nSP = CP + Profit\\n\\n$\\text{Profit \\%} = \\dfrac{\\text{Profit}}{\\text{CP}} \\times 100 \\Rightarrow \\text{Profit} = \\dfrac{\\text{Profit\\%} \\times \\text{CP}}{100}$ \\n\\nProfit = $\\dfrac{250 \\times 12}{100}$ = 30\\n\\nSP = 12 + 30 = 42\\n\\nMP = SP + Discount\\n\\nMP = 42 + 5 = 47\\n\\nTherefore, marked price of the book is  Rs.47."
+    },
+    {
+      "id": "pl-m-2",
+      "topicId": "profit-loss",
+      "difficulty": "medium",
+      "question": "Rahul sold his old bike at Rs.2500, which cost him Rs.1750. However, he marked 50% higher on the Cost Price when selling. What is the Marked Price?",
+      "options": ["2500", "2625", "2526", "2620"],
+      "answerIndex": 1,
+      "explanation": "Given, SP = 2500 and CP = 1750.\\n\\nBy given condition, MP = 50 % CP + CP\\n\\n= $\\left(\\dfrac{50}{100} \\times 1750 \\right)+ 1750$\\n\\n= 875 + 1750 = 2625\\n\\nHence, the marked price on the bike was  Rs.2625."
     },
     {
       "id": "pl-h-2",
       "topicId": "profit-loss",
       "difficulty": "hard",
-      "question": "Two articles sold at ₹600 each. One at 20% profit, other at 20% loss. Find overall profit/loss.",
-      "options": ["Loss of ₹50", "No profit no loss", "Profit of ₹50", "Loss of ₹100"],
+      "question": "A vendor marked his goods at 30% higher than the Selling Price, and he sold them at a 25% profit on the Cost Price. What is the Selling Price of the goods if he marked the goods at Rs.130?",
+      "options": ["110", "80", "100", "90"],
+      "answerIndex": 2,
+      "explanation": "Given, vendor marked good 30% more than SP\\n\\nProfit % = 25 and marked price (MP) = 130\\n\\nMP = SP + Discount \\n\\nHere Discount = 30% of SP = 0.3 SP\\n\\nMP = 1.3 SP\\n\\n130 = 1.3 SP\\n\\nSP = $\\dfrac{130}{1.3}$ = $\\dfrac{1300}{13}$ = 100\\n\\nHence, the selling price of the goods is  Rs.100."
+    },
+    {
+      "id": "pl-e-3",
+      "topicId": "profit-loss",
+      "difficulty": "easy",
+      "question": "A bookkeeper sold a bundle of books at a 25% profit. Moreover, the bundle cost him Rs.132. Then what is the selling price?",
+      "options": ["150", "155", "160", "165"],
+      "answerIndex": 3,
+      "explanation": "Given, Profit % = 25 and CP = 132\\n\\nWe know, SP = CP + Profit\\n\\n$\\text{Profit \\%} = \\dfrac{\\text{Profit}}{\\text{CP}} \\times 100 \\Rightarrow \\text{Profit} = \\dfrac{\\text{Profit\\%} \\times \\text{CP}}{100}$ \\n\\nProfit = $\\dfrac{25 \\times 132}{100}$ = 33\\n\\nSP = CP + Profit = 132 + 33 = 165\\n\\nHence, the selling price of bundle of books is  Rs.165."
+    },
+    {
+      "id": "pl-m-3",
+      "topicId": "profit-loss",
+      "difficulty": "medium",
+      "question": "A bookkeeper sold a bundle of books at 33% profit, and the cost price is 75%of 132. Then what is the selling price?",
+      "options": ["131.67", "133", "132.67", "132"],
       "answerIndex": 0,
-      "explanation": "CP₁=600/1.2=500, CP₂=600/0.8=750. Total CP=1250, Total SP=1200. Loss=₹50."
+      "explanation": "Given, Profit % = 33 and CP = 75 % of 132\\n\\nCP = $\\dfrac{75}{100} \\times 132$ = 99\\n\\nCP = 99\\n\\nSP = CP + Profit\\n\\n$\\text{Profit} = \\dfrac{\\text{Profit\\%} \\times \\text{CP}}{100}$\\n\\nProfit = $\\dfrac{33 \\times 99}{100}$ = 32.67\\n\\nSP = 99 + 32.67 = 131.67\\n\\nHence, the selling price is 131.67."
     },
     {
       "id": "pl-h-3",
       "topicId": "profit-loss",
       "difficulty": "hard",
-      "question": "A dishonest dealer uses 900g weight instead of 1kg and claims to sell at CP. Find profit%.",
-      "options": ["11.11%", "10%", "12%", "15%"],
-      "answerIndex": 0,
-      "explanation": "He pays for 900g but sells as 1000g. Profit = 100g on 900g = (100/900)×100 = 11.11%."
-    },
-    {
-      "id": "pl-h-4",
-      "topicId": "profit-loss",
-      "difficulty": "hard",
-      "question": "If CP increases by 25% but SP remains same, profit decreases by 15%. Find original profit%.",
-      "options": ["60%", "50%", "40%", "75%"],
-      "answerIndex": 0,
-      "explanation": "Let CP=100, SP=100+P. New CP=125, New profit=P-15. 100+P=125+(P-15) ⇒ P=60%."
+      "question": "Amit sold his Car and Bike due to financial issues. On the Car, which cost him Rs.5000, he got a 20% profit. On the Bike, which cost him Rs.2500, he incurred a loss of Rs.500. What is his overall profit or loss from these transactions?",
+      "options": ["1000", "500", "5000", "100"],
+      "answerIndex": 1,
+      "explanation": "Given, $CP_1$ = 5000, $CP_2$ = 2500\\n\\nProfit % on Car = 20%\\n\\nLoss on Bike = 500\\n\\nProfit on Car = 20% of $CP_1$ + $CP_1$\\n\\n= $\\left(\\dfrac{20}{100} \\times 5000 \\right)$ = 1000 \\n\\nWhich means, \\n\\n$SP_1$ = 5000 + 1000 = 6000\\n\\n$SP_2$ = 2500 - 500 = 2000\\n\\nCP = $CP_1$ + $CP_2$ = 5000 + 2500 = 7500\\n\\nSP = $SP_1$ + $SP_2$ = 6000 + 2000 = 8000\\n\\nProfit = SP - CP = 8000 - 7500 = 500\\n\\nHence, Amit made a profit on these transactions of 500."
     }
   ]
 }
