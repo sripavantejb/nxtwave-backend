@@ -19,9 +19,9 @@ export async function connectToDatabase() {
 
   // Minimal connection options to work around Node.js v22 SSL/TLS issues
   client = new MongoClient(MONGO_URI, {
-    // Connection timeout
-    connectTimeoutMS: 30000,
-    serverSelectionTimeoutMS: 30000,
+    // Connection timeout - reduced for faster failure detection
+    connectTimeoutMS: 2000,
+    serverSelectionTimeoutMS: 2000,
     // Retry options
     retryWrites: true,
     retryReads: true

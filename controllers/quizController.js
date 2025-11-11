@@ -52,18 +52,8 @@ export async function getSingleQuestion(req, res) {
     // Handle compound topics like si-ci
     const topicIds = topicId === 'si-ci' ? ['si', 'ci'] : [topicId];
     
-    // Find questions matching criteria
-    let questions = await findQuestions({ topicIds, difficulties, excludeIds });
-    
-    // If no questions found with excludeIds, try without exclusions
-    if (questions.length === 0 && excludeIds.length > 0) {
-      questions = await findQuestions({ topicIds, difficulties });
-    }
-    
-    // If still no questions, try without difficulty filter
-    if (questions.length === 0) {
-      questions = await findQuestions({ topicIds, excludeIds });
-    }
+    // Single optimized query - findQuestions now uses fast file-based data first
+    const questions = await findQuestions({ topicIds, difficulties, excludeIds });
     
     if (questions.length === 0) {
       return res.status(404).json({ error: 'No questions available' });
