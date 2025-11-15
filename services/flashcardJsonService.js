@@ -1,5 +1,5 @@
 import { loadQuestionsFromCSV } from './csvQuestionService.js';
-import { getEligibleQuestionIdsForUser, getUserReviewData } from './userService.js';
+import { getEligibleQuestionIdsForUser, getUserReviewData, getShownFlashcards } from './userService.js';
 import { getAllDueQuestions } from './spacedRepService.js';
 
 /**
@@ -11,16 +11,64 @@ export function loadQuestions() {
 }
 
 /**
+ * Get all unique subtopics from CSV data that have flashcards
+ * @returns {Array<string>} Array of unique subtopic names
+ */
+export function getAllUniqueSubtopics() {
+  const data = loadQuestions();
+  const subtopicsSet = new Set();
+  
+  // Only include subtopics that have flashcards
+  data.questions.forEach(q => {
+    if (q.flashcard && q.flashcard.trim() !== '' && q.subTopic && q.subTopic.trim() !== '') {
+      subtopicsSet.add(q.subTopic.trim());
+    }
+  });
+  
+  return Array.from(subtopicsSet);
+}
+
+/**
+ * Pick N random unique subtopics from available subtopics
+ * @param {number} count - Number of subtopics to pick (default: 6)
+ * @returns {Array<string>} Array of randomly selected subtopic names
+ */
+export function pickRandomSubtopics(count = 6) {
+  const allSubtopics = getAllUniqueSubtopics();
+  
+  if (allSubtopics.length === 0) {
+    return [];
+  }
+  
+  // If we have fewer subtopics than requested, return all
+  if (allSubtopics.length <= count) {
+    return [...allSubtopics];
+  }
+  
+  // Shuffle and pick first N
+  const shuffled = [...allSubtopics].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, count);
+}
+
+/**
  * Get a random flashcard from CSV
  * Prioritizes due reviews for authenticated users, then new flashcards
  * @param {string} userId - Optional user ID for per-user tracking
+ * @param {Array<string>} allowedSubtopics - Optional array of subtopic names to filter by
  * @returns {Object|null} Random question with flashcard data
  */
-export function getRandomFlashcard(userId = null) {
+export function getRandomFlashcard(userId = null, allowedSubtopics = null) {
   const data = loadQuestions();
-  const questionsWithFlashcards = data.questions.filter(
+  let questionsWithFlashcards = data.questions.filter(
     q => q.flashcard && q.flashcard.trim() !== ''
   );
+  
+  // Filter by allowed subtopics if provided
+  if (allowedSubtopics && Array.isArray(allowedSubtopics) && allowedSubtopics.length > 0) {
+    questionsWithFlashcards = questionsWithFlashcards.filter(
+      q => q.subTopic && allowedSubtopics.includes(q.subTopic.trim())
+    );
+  }
   
   if (questionsWithFlashcards.length === 0) {
     return null;
@@ -28,10 +76,23 @@ export function getRandomFlashcard(userId = null) {
   
   // If user is authenticated, check for due reviews first (prioritize)
   if (userId) {
-    const dueQuestionIds = getAllDueQuestions(userId);
-    const dueFlashcards = questionsWithFlashcards.filter(q => dueQuestionIds.includes(q.id));
+    // Get flashcards already shown in this session to avoid repetition
+    const shownFlashcardIds = getShownFlashcards(userId);
     
-    // If due flashcards exist, return random one
+    // Filter out already shown flashcards
+    let availableFlashcards = questionsWithFlashcards.filter(
+      q => !shownFlashcardIds.includes(q.id)
+    );
+    
+    // If all flashcards are shown, reset and use all (for new session)
+    if (availableFlashcards.length === 0) {
+      availableFlashcards = questionsWithFlashcards;
+    }
+    
+    const dueQuestionIds = getAllDueQuestions(userId);
+    const dueFlashcards = availableFlashcards.filter(q => dueQuestionIds.includes(q.id));
+    
+    // If due flashcards exist, return random one (excluding shown ones)
     if (dueFlashcards.length > 0) {
       const randomIndex = Math.floor(Math.random() * dueFlashcards.length);
       const question = dueFlashcards[randomIndex];
@@ -49,10 +110,14 @@ export function getRandomFlashcard(userId = null) {
     
     // No due flashcards, prioritize new flashcards (not in reviewData)
     const reviewData = getUserReviewData(userId);
-    const newFlashcards = questionsWithFlashcards.filter(q => !reviewData[q.id]);
+    const newFlashcards = availableFlashcards.filter(q => !reviewData[q.id]);
     
-    // Use new flashcards if available, otherwise use all
-    const eligibleQuestions = newFlashcards.length > 0 ? newFlashcards : questionsWithFlashcards;
+    // Use new flashcards if available, otherwise use all available (excluding shown)
+    const eligibleQuestions = newFlashcards.length > 0 ? newFlashcards : availableFlashcards;
+    
+    if (eligibleQuestions.length === 0) {
+      return null; // No more flashcards available
+    }
     
     const randomIndex = Math.floor(Math.random() * eligibleQuestions.length);
     const question = eligibleQuestions[randomIndex];
@@ -101,30 +166,58 @@ export function mapRatingToDifficulty(rating) {
  * @param {string} difficulty - "Easy", "Medium", or "Hard"
  * @param {string} userId - Optional user ID for per-user tracking
  * @param {string} subTopic - Optional subtopic to match exactly
+ * @param {string} flashcardQuestionId - Optional flashcard question ID to filter by flashcard linkage
  * @returns {Object|null} Follow-up question
  */
-export function getFollowUpQuestion(topicId, difficulty, userId = null, subTopic = null) {
+export function getFollowUpQuestion(topicId, difficulty, userId = null, subTopic = null, flashcardQuestionId = null) {
   const data = loadQuestions();
   
   // Convert difficulty to lowercase to match data format
   const difficultyLower = difficulty.toLowerCase();
   
   // Filter questions by topic and difficulty
+  // Only include questions that have actual question text (not just flashcards)
   let candidateQuestions = data.questions.filter(
-    q => q.topicId === topicId && q.difficulty === difficultyLower
+    q => q.topicId === topicId && 
+         q.difficulty === difficultyLower &&
+         q.question && 
+         q.question.trim() !== '' &&
+         q.options && 
+         q.options.length >= 2
   );
   
-  // If subtopic is provided, filter by subtopic as well (must match exactly)
-  if (subTopic && subTopic.trim() !== '') {
-    const subTopicFiltered = candidateQuestions.filter(q => q.subTopic === subTopic);
-    // If we found questions matching subtopic, use those; otherwise fall back to all questions for topic
-    if (subTopicFiltered.length > 0) {
-      candidateQuestions = subTopicFiltered;
+  // If flashcardQuestionId is provided, filter questions to match that specific flashcard
+  // This ensures questions are matched to the flashcard's concept, not just subtopic
+  if (flashcardQuestionId && flashcardQuestionId.trim() !== '') {
+    const flashcardQuestion = data.questions.find(q => q.id === flashcardQuestionId);
+    
+    if (flashcardQuestion && flashcardQuestion.flashcard) {
+      const flashcardText = flashcardQuestion.flashcard.trim();
+      // Filter questions to only those that have the same flashcard text
+      // This matches questions to the specific flashcard concept
+      candidateQuestions = candidateQuestions.filter(q => 
+        q.flashcard && q.flashcard.trim() === flashcardText
+      );
+    } else {
+      // If flashcard question not found or has no flashcard text, return null
+      console.log(`Flashcard question with ID ${flashcardQuestionId} not found or has no flashcard text. Returning null.`);
+      return null;
     }
   }
   
+  // If subtopic is provided, filter by subtopic (case-insensitive, trimmed) - MANDATORY, no fallback
+  if (subTopic && subTopic.trim() !== '') {
+    const subTopicNormalized = subTopic.trim().toLowerCase();
+    candidateQuestions = candidateQuestions.filter(q => {
+      const qSubTopic = (q.subTopic || '').trim().toLowerCase();
+      // Case-insensitive matching - strict filtering, no fallback
+      return qSubTopic === subTopicNormalized;
+    });
+  }
+  
+  // If no questions found for this exact topic/difficulty/subtopic/flashcard combo, return null (NO fallbacks)
   if (candidateQuestions.length === 0) {
-    // No questions found for this topic/difficulty/subtopic combo
+    console.log(`No follow-up questions found for topicId: ${topicId}, difficulty: ${difficultyLower}, subTopic: ${subTopic}, flashcardQuestionId: ${flashcardQuestionId}. Returning null.`);
     return null;
   }
   
@@ -166,7 +259,7 @@ export function getFollowUpQuestion(topicId, difficulty, userId = null, subTopic
     options,
     key,
     explanation: question.explanation,
-    difficulty: difficulty,
+    difficulty: question.difficulty.charAt(0).toUpperCase() + question.difficulty.slice(1), // Use actual question difficulty, not requested
     topic: question.topicId
   };
 }

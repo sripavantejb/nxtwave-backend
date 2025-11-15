@@ -228,3 +228,213 @@ export function isQuestionEligibleForUser(userId, questionId) {
 export function getEligibleQuestionIdsForUser(userId, questionIds) {
   return questionIds.filter(qId => isQuestionEligibleForUser(userId, qId));
 }
+
+/**
+ * Mark a flashcard subtopic as completed for a user
+ * @param {string} userId - User ID
+ * @param {string} subtopicName - Subtopic name
+ * @param {string} nextReviewDate - Next review date (ISO string)
+ * @returns {boolean} Success status
+ */
+export function markSubtopicCompleted(userId, subtopicName, nextReviewDate = null) {
+  try {
+    const users = loadUsers();
+    
+    if (!users[userId]) {
+      console.error(`User ${userId} not found`);
+      return false;
+    }
+    
+    // Initialize reviewData if it doesn't exist
+    if (!users[userId].reviewData) {
+      users[userId].reviewData = {};
+    }
+    
+    // Initialize flashcardSubtopic if it doesn't exist
+    if (!users[userId].reviewData.flashcardSubtopic) {
+      users[userId].reviewData.flashcardSubtopic = {};
+    }
+    
+    // Mark subtopic as completed with next review date
+    users[userId].reviewData.flashcardSubtopic[subtopicName] = {
+      nextReviewDate: nextReviewDate || null
+    };
+    
+    // Add to completedSubtopics array if not already there
+    if (!users[userId].reviewData.completedSubtopics) {
+      users[userId].reviewData.completedSubtopics = [];
+    }
+    
+    if (!users[userId].reviewData.completedSubtopics.includes(subtopicName)) {
+      users[userId].reviewData.completedSubtopics.push(subtopicName);
+    }
+    
+    return saveUsers(users);
+  } catch (error) {
+    console.error('Error marking subtopic as completed:', error);
+    return false;
+  }
+}
+
+/**
+ * Get list of completed subtopics for a user
+ * @param {string} userId - User ID
+ * @returns {Array<string>} Array of completed subtopic names
+ */
+export function getCompletedSubtopics(userId) {
+  const reviewData = getUserReviewData(userId);
+  return reviewData.completedSubtopics || [];
+}
+
+/**
+ * Get current session's 6 subtopics for a user
+ * @param {string} userId - User ID
+ * @returns {Array<string>} Array of subtopic names in current session
+ */
+export function getSessionSubtopics(userId) {
+  const reviewData = getUserReviewData(userId);
+  return reviewData.sessionSubtopics || [];
+}
+
+/**
+ * Start a new session by picking 6 random subtopics and storing in user data
+ * @param {string} userId - User ID
+ * @param {Array<string>} subtopics - Array of 6 subtopic names to set as session
+ * @returns {boolean} Success status
+ */
+export function startNewSession(userId, subtopics) {
+  try {
+    const users = loadUsers();
+    
+    if (!users[userId]) {
+      console.error(`User ${userId} not found`);
+      return false;
+    }
+    
+    // Initialize reviewData if it doesn't exist
+    if (!users[userId].reviewData) {
+      users[userId].reviewData = {};
+    }
+    
+    // Store session subtopics
+    users[userId].reviewData.sessionSubtopics = subtopics;
+    
+    // Reset shown flashcards for new session (track which flashcards have been shown in this session)
+    users[userId].reviewData.shownFlashcards = [];
+    
+    // Reset completed subtopics for new session (or keep existing if you want to track all-time)
+    // For now, we'll keep completedSubtopics as all-time tracking
+    
+    return saveUsers(users);
+  } catch (error) {
+    console.error('Error starting new session:', error);
+    return false;
+  }
+}
+
+/**
+ * Get list of shown flashcard IDs for current session
+ * @param {string} userId - User ID
+ * @returns {Array<string>} Array of shown flashcard question IDs
+ */
+export function getShownFlashcards(userId) {
+  const reviewData = getUserReviewData(userId);
+  return reviewData.shownFlashcards || [];
+}
+
+/**
+ * Mark a flashcard as shown in the current session
+ * @param {string} userId - User ID
+ * @param {string} questionId - Question ID of the flashcard shown
+ * @returns {boolean} Success status
+ */
+export function markFlashcardAsShown(userId, questionId) {
+  try {
+    const users = loadUsers();
+    
+    if (!users[userId]) {
+      console.error(`User ${userId} not found`);
+      return false;
+    }
+    
+    // Initialize reviewData if it doesn't exist
+    if (!users[userId].reviewData) {
+      users[userId].reviewData = {};
+    }
+    
+    // Initialize shownFlashcards if it doesn't exist
+    if (!users[userId].reviewData.shownFlashcards) {
+      users[userId].reviewData.shownFlashcards = [];
+    }
+    
+    // Add questionId if not already in the list
+    if (!users[userId].reviewData.shownFlashcards.includes(questionId)) {
+      users[userId].reviewData.shownFlashcards.push(questionId);
+    }
+    
+    return saveUsers(users);
+  } catch (error) {
+    console.error('Error marking flashcard as shown:', error);
+    return false;
+  }
+}
+
+/**
+ * Check if a subtopic is due for review
+ * @param {string} userId - User ID
+ * @param {string} subtopicName - Subtopic name
+ * @returns {boolean} True if subtopic is due for review
+ */
+export function isSubtopicDue(userId, subtopicName) {
+  const reviewData = getUserReviewData(userId);
+  const subtopicData = reviewData.flashcardSubtopic?.[subtopicName];
+  
+  if (!subtopicData || !subtopicData.nextReviewDate) {
+    return true; // No schedule exists, eligible for review
+  }
+  
+  const nextReview = new Date(subtopicData.nextReviewDate);
+  const now = new Date();
+  
+  return now >= nextReview;
+}
+
+/**
+ * Update flashcard subtopic's next review date
+ * @param {string} userId - User ID
+ * @param {string} subtopicName - Subtopic name
+ * @param {string} nextReviewDate - Next review date (ISO string)
+ * @returns {boolean} Success status
+ */
+export function updateSubtopicReviewDate(userId, subtopicName, nextReviewDate) {
+  try {
+    const users = loadUsers();
+    
+    if (!users[userId]) {
+      console.error(`User ${userId} not found`);
+      return false;
+    }
+    
+    // Initialize reviewData if it doesn't exist
+    if (!users[userId].reviewData) {
+      users[userId].reviewData = {};
+    }
+    
+    // Initialize flashcardSubtopic if it doesn't exist
+    if (!users[userId].reviewData.flashcardSubtopic) {
+      users[userId].reviewData.flashcardSubtopic = {};
+    }
+    
+    // Update or create subtopic entry
+    if (!users[userId].reviewData.flashcardSubtopic[subtopicName]) {
+      users[userId].reviewData.flashcardSubtopic[subtopicName] = {};
+    }
+    
+    users[userId].reviewData.flashcardSubtopic[subtopicName].nextReviewDate = nextReviewDate;
+    
+    return saveUsers(users);
+  } catch (error) {
+    console.error('Error updating subtopic review date:', error);
+    return false;
+  }
+}

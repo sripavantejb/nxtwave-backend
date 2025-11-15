@@ -1,4 +1,4 @@
-import { getUserReviewData } from './userService.js';
+import { getUserReviewData, isSubtopicDue } from './userService.js';
 
 /**
  * Calculate next review date based on answer correctness and difficulty
@@ -83,7 +83,15 @@ export function getAllDueQuestions(userId) {
   const now = new Date();
   const dueQuestionIds = [];
 
+  // Skip special keys like flashcardSubtopic, sessionSubtopics, completedSubtopics
+  const specialKeys = ['flashcardSubtopic', 'sessionSubtopics', 'completedSubtopics'];
+  
   for (const [questionId, review] of Object.entries(reviewData)) {
+    // Skip special keys
+    if (specialKeys.includes(questionId)) {
+      continue;
+    }
+    
     if (review && review.nextReviewDate) {
       const nextReview = new Date(review.nextReviewDate);
       if (now >= nextReview) {
@@ -93,5 +101,59 @@ export function getAllDueQuestions(userId) {
   }
 
   return dueQuestionIds;
+}
+
+/**
+ * Get all flashcard subtopics that are due for review for a user
+ * @param {string} userId - User ID
+ * @returns {Array<string>} Array of subtopic names that are due
+ */
+export function getDueFlashcardSubtopics(userId) {
+  if (!userId) {
+    return [];
+  }
+
+  const reviewData = getUserReviewData(userId);
+  const flashcardSubtopic = reviewData.flashcardSubtopic || {};
+  const dueSubtopics = [];
+
+  for (const [subtopicName, subtopicData] of Object.entries(flashcardSubtopic)) {
+    if (isSubtopicDue(userId, subtopicName)) {
+      dueSubtopics.push(subtopicName);
+    }
+  }
+
+  return dueSubtopics;
+}
+
+/**
+ * Calculate next review date for flashcard subtopic based on follow-up answer correctness and difficulty
+ * @param {boolean} isCorrect - Whether the follow-up answer was correct
+ * @param {string} difficulty - Difficulty level from rating ("easy", "medium", "hard")
+ * @returns {Date} Next review date
+ */
+export function calculateSubtopicNextReviewDate(isCorrect, difficulty) {
+  const now = new Date();
+  const difficultyLower = String(difficulty || 'medium').toLowerCase();
+
+  if (!isCorrect) {
+    // Wrong answer → always 1 day
+    now.setDate(now.getDate() + 1);
+    return now;
+  }
+
+  // Correct answer → schedule based on difficulty
+  if (difficultyLower === 'easy') {
+    now.setDate(now.getDate() + 3);
+  } else if (difficultyLower === 'medium') {
+    now.setDate(now.getDate() + 5);
+  } else if (difficultyLower === 'hard') {
+    now.setDate(now.getDate() + 7);
+  } else {
+    // Default to medium if unknown
+    now.setDate(now.getDate() + 5);
+  }
+
+  return now;
 }
 

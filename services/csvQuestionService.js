@@ -1,3 +1,12 @@
+/**
+ * CSV Question Service
+ * 
+ * SINGLE SOURCE OF TRUTH: All questions are loaded from topics_until_percentages.csv
+ * This is the only file that should contain question data.
+ * 
+ * Location: backend/topics_until_percentages.csv
+ */
+
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -6,6 +15,7 @@ import { parse } from 'csv-parse/sync';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// SINGLE SOURCE OF TRUTH: All questions come from this CSV file
 const CSV_PATH = path.join(__dirname, '../topics_until_percentages.csv');
 
 let cachedData = null;
@@ -90,10 +100,14 @@ export function loadQuestionsFromCSV() {
     const topicsMap = new Map();
     const questions = [];
     const questionCounters = {}; // Track counters per topic-difficulty
+    let lastTopicName = ''; // Carry forward last topic when Topic field is empty
+    let lastSubTopic = ''; // Carry forward last subtopic when Sub-Topic field is empty
+    let lastFlashcard = ''; // Carry forward last flashcard text to link questions to flashcards
+    let lastFlashcardAnswer = ''; // Carry forward last flashcard answer
 
     for (const row of records) {
-      const topicName = row['Topic']?.trim() || '';
-      const subTopic = row['Sub-Topic']?.trim() || '';
+      let topicName = row['Topic']?.trim() || '';
+      let subTopic = row['Sub-Topic']?.trim() || '';
       const flashcard = row['Flashcard']?.trim() || '';
       const flashcardAnswer = row['Answer']?.trim() || '';
       const questionText = row['Question']?.trim() || '';
@@ -104,6 +118,30 @@ export function loadQuestionsFromCSV() {
       const optionD = row['Option D']?.trim() || '';
       const key = row['Key']?.trim() || '';
       const explanation = row['Explanation']?.trim() || '';
+
+      // Carry forward last topic/subtopic if current row has empty Topic/Sub-Topic but has a question
+      // This handles CSV format where Topic is only specified once per group
+      if (!topicName && questionText) {
+        topicName = lastTopicName;
+      }
+      if (!subTopic && questionText) {
+        subTopic = lastSubTopic;
+      }
+
+      // Update last seen topic/subtopic if they exist
+      if (topicName) {
+        lastTopicName = topicName;
+      }
+      if (subTopic) {
+        lastSubTopic = subTopic;
+      }
+
+      // Update last flashcard if a new flashcard is encountered
+      // This links subsequent questions (with empty flashcard field) to the previous flashcard
+      if (flashcard) {
+        lastFlashcard = flashcard;
+        lastFlashcardAnswer = flashcardAnswer;
+      }
 
       // Skip rows without topic or question
       if (!topicName || !questionText) {
@@ -159,12 +197,15 @@ export function loadQuestionsFromCSV() {
         explanation: explanation
       };
 
-      // Add flashcard fields if present
+      // Add flashcard fields - use current row's flashcard or carry forward from previous flashcard
+      // This links questions to their associated flashcard even when flashcard field is empty
       if (flashcard) {
         question.flashcard = flashcard;
-      }
-      if (flashcardAnswer) {
         question.flashcardAnswer = flashcardAnswer;
+      } else if (lastFlashcard && questionText) {
+        // Carry forward flashcard to questions that follow (empty flashcard field means it belongs to previous flashcard)
+        question.flashcard = lastFlashcard;
+        question.flashcardAnswer = lastFlashcardAnswer;
       }
 
       questions.push(question);

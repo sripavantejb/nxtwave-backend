@@ -9,7 +9,8 @@ import {
   submitAnswer,
   getNextQuestion,
   getDueReviews,
-  getConcepts
+  getConcepts,
+  startSession
 } from '../controllers/flashcardController.js';
 import { optionalAuth, authenticateUser } from '../middleware/auth.js';
 
@@ -25,6 +26,7 @@ router.get('/random-json', optionalAuth, getRandomFlashcardJson);
 router.post('/rate', optionalAuth, rateFlashcard); // Deprecated, kept for backward compatibility
 
 // Routes requiring JWT authentication
+router.get('/start-session', authenticateUser, startSession);
 router.post('/submit-rating', authenticateUser, submitRating);
 router.post('/question/submit', authenticateUser, submitAnswer);
 router.get('/next-question', authenticateUser, getNextQuestion);

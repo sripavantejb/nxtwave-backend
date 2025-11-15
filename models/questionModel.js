@@ -6,7 +6,7 @@ function loadQuestionsFromFile() {
   return data.questions || [];
 }
 
-function filterLocalQuestions(questions, { topicIds, difficulties, excludeIds }) {
+function filterLocalQuestions(questions, { topicIds, difficulties, excludeIds, subTopics }) {
   let filtered = questions;
   if (topicIds?.length) {
     const topicsSet = new Set(topicIds);
@@ -15,6 +15,16 @@ function filterLocalQuestions(questions, { topicIds, difficulties, excludeIds })
   if (difficulties?.length) {
     const diffSet = new Set(difficulties);
     filtered = filtered.filter(q => diffSet.has(q.difficulty));
+  }
+  if (subTopics?.length) {
+    // Normalize subtopics for case-insensitive matching
+    const subTopicsNormalized = subTopics.map(st => (st || '').trim().toLowerCase()).filter(Boolean);
+    if (subTopicsNormalized.length > 0) {
+      filtered = filtered.filter(q => {
+        const qSubTopic = (q.subTopic || '').trim().toLowerCase();
+        return subTopicsNormalized.includes(qSubTopic);
+      });
+    }
   }
   if (excludeIds?.length) {
     const excludeSet = new Set(excludeIds);
@@ -27,7 +37,11 @@ function normalizeFilters(filters = {}) {
   const topicIds = filters.topicIds?.filter(Boolean) ?? [];
   const difficulties = filters.difficulties?.filter(Boolean) ?? [];
   const excludeIds = filters.excludeIds?.filter(Boolean) ?? [];
-  return { topicIds, difficulties, excludeIds };
+  // Handle subTopics - can be a single string or array of strings
+  const subTopics = filters.subTopics 
+    ? (Array.isArray(filters.subTopics) ? filters.subTopics : [filters.subTopics]).filter(Boolean)
+    : [];
+  return { topicIds, difficulties, excludeIds, subTopics: subTopics };
 }
 
 export async function findQuestions(filters = {}) {

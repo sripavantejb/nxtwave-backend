@@ -30,6 +30,7 @@ export async function getSingleQuestion(req, res) {
     const ratingParam = Number(req.query.rating || 3);
     const excludeIdsParam = req.query.excludeIds || '';
     const subTopic = String(req.query.subTopic || '').trim();
+    const flashcardQuestionId = String(req.query.flashcardQuestionId || '').trim();
     
     if (!topicId) {
       return res.status(400).json({ error: 'Missing topicId' });
@@ -55,20 +56,36 @@ export async function getSingleQuestion(req, res) {
     // Handle compound topics like si-ci
     const topicIds = topicId === 'si-ci' ? ['si', 'ci'] : [topicId];
     
-    // Single optimized query - findQuestions now uses fast file-based data first
-    let questions = await findQuestions({ topicIds, difficulties, excludeIds });
-    
-    // Filter by subTopic if provided
-    if (subTopic && questions.length > 0) {
-      const subTopicFiltered = questions.filter(q => q.subTopic === subTopic);
-      if (subTopicFiltered.length > 0) {
-        questions = subTopicFiltered;
-      }
-      // If no questions match the subTopic, fall back to all questions for the topic
+    // Build filter object with mandatory subtopic filtering when provided
+    const filterParams = { topicIds, difficulties, excludeIds };
+    if (subTopic && subTopic.trim() !== '') {
+      // Add subtopic as mandatory filter - no fallback to other subtopics
+      filterParams.subTopics = [subTopic.trim()];
     }
     
+    // Single optimized query with strict subtopic filtering (no fallbacks)
+    let questions = await findQuestions(filterParams);
+    
+    // If flashcardQuestionId is provided, filter questions to match that specific flashcard
+    // This ensures questions are matched to the flashcard's concept, not just subtopic
+    if (flashcardQuestionId && questions.length > 0) {
+      // Load questions to find the flashcard text
+      const data = loadQuestions();
+      const flashcardQuestion = data.questions.find(q => q.id === flashcardQuestionId);
+      
+      if (flashcardQuestion && flashcardQuestion.flashcard) {
+        const flashcardText = flashcardQuestion.flashcard.trim();
+        // Filter questions to only those that have the same flashcard text
+        // This matches questions to the specific flashcard concept
+        questions = questions.filter(q => 
+          q.flashcard && q.flashcard.trim() === flashcardText
+        );
+      }
+    }
+    
+    // If no questions found for requested difficulty in that subtopic/flashcard, return error
     if (questions.length === 0) {
-      return res.status(404).json({ error: 'No questions available' });
+      return res.status(404).json({ error: 'Requested Question Not Found' });
     }
     
     // Pick a random question from the filtered list
@@ -95,7 +112,7 @@ export function getNextQuestion(req, res) {
       return res.status(401).json({ error: 'Authentication required' });
     }
     
-    // Load all questions from questions.json
+    // Load all questions from topics_until_percentages.csv
     const data = loadQuestions();
     
     if (!data.questions || data.questions.length === 0) {

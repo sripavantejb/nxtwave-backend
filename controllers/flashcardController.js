@@ -10,12 +10,14 @@ import {
   mapRatingToDifficulty,
   getFollowUpQuestion as getFollowUpQuestionFromJson,
   validateAnswer as validateAnswerFromJson,
-  getQuestionById
+  getQuestionById,
+  loadQuestions,
+  pickRandomSubtopics,
+  getRandomFlashcard as getRandomFlashcardFromService
 } from '../services/flashcardJsonService.js';
 import { updateReviewSchedule } from '../utils/reviewSchedule.js';
-import { updateUserReviewData, getUserReviewData } from '../services/userService.js';
-import { calculateNextReviewDate, getAllDueQuestions } from '../services/spacedRepService.js';
-import { loadQuestions } from '../services/flashcardJsonService.js';
+import { updateUserReviewData, getUserReviewData, startNewSession, getSessionSubtopics, getCompletedSubtopics, isSubtopicDue, markSubtopicCompleted, updateSubtopicReviewDate, markFlashcardAsShown } from '../services/userService.js';
+import { calculateNextReviewDate, getAllDueQuestions, getDueFlashcardSubtopics, calculateSubtopicNextReviewDate } from '../services/spacedRepService.js';
 
 let cachedTopicMap = null;
 let cachedTopicTimestamp = 0;
@@ -132,18 +134,152 @@ export async function getFollowUpFlashcard(req, res) {
 // ============== NEW JSON-BASED ENDPOINTS ==============
 
 /**
+ * GET /flashcards/start-session
+ * Initializes a new session with 6 random subtopics
+ * Requires JWT authentication
+ * Returns the 6 subtopics selected for this session
+ */
+export async function startSession(req, res) {
+  try {
+    const userId = req.userId; // Set by authenticateUser middleware (required)
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    // Check if force parameter is provided (to force new session even if one exists)
+    const forceNew = req.query.force === 'true' || req.query.force === '1';
+    
+    // Check if user already has an active session
+    const existingSession = getSessionSubtopics(userId);
+    
+    // If session exists and has subtopics, and not forcing new session, return existing session
+    if (!forceNew && existingSession && existingSession.length > 0) {
+      return res.json({
+        sessionSubtopics: existingSession,
+        isNewSession: false
+      });
+    }
+    
+    // Pick 6 random subtopics
+    const subtopics = pickRandomSubtopics(6);
+    
+    if (subtopics.length === 0) {
+      return res.status(404).json({ error: 'No subtopics available' });
+    }
+    
+    // Store session in user's reviewData (this also resets shownFlashcards)
+    const success = startNewSession(userId, subtopics);
+    
+    if (!success) {
+      return res.status(500).json({ error: 'Failed to start session' });
+    }
+    
+    return res.json({
+      sessionSubtopics: subtopics,
+      isNewSession: true
+    });
+  } catch (err) {
+    console.error('Error starting session:', err);
+    return res.status(500).json({ error: 'Failed to start session' });
+  }
+}
+
+/**
  * GET /flashcard/random-json
- * Returns a random flashcard from questions.json
+ * Returns a random flashcard from topics_until_percentages.csv
+ * Prioritizes due reviews, then shows flashcards from session's 6 subtopics
+ * Excludes completed subtopics unless they are due for review
  * Supports authenticated users for per-user tracking
  */
 export async function getRandomFlashcardJson(req, res) {
   try {
     const userId = req.userId; // Set by optionalAuth middleware
-    const flashcard = getRandomFlashcardFromJson(userId);
+    
+    if (!userId) {
+      // For non-authenticated users, return random flashcard
+      const flashcard = getRandomFlashcardFromJson(userId);
+      if (!flashcard) {
+        return res.status(404).json({ error: 'No flashcards available' });
+      }
+      return res.json(flashcard);
+    }
+    
+    // Priority 1: Check for due spaced repetition questions
+    const dueQuestionIds = getAllDueQuestions(userId);
+    if (dueQuestionIds.length > 0) {
+      const data = loadQuestions();
+      const questionsWithFlashcards = data.questions.filter(
+        q => q.flashcard && q.flashcard.trim() !== '' && dueQuestionIds.includes(q.id)
+      );
+      
+      if (questionsWithFlashcards.length > 0) {
+        const randomIndex = Math.floor(Math.random() * questionsWithFlashcards.length);
+        const question = questionsWithFlashcards[randomIndex];
+        const topic = data.topics.find(t => t.id === question.topicId);
+        
+        const flashcardData = {
+          questionId: question.id,
+          flashcard: question.flashcard,
+          flashcardAnswer: question.flashcardAnswer,
+          topic: topic ? topic.name : question.topicId,
+          subTopic: question.subTopic || topic?.name || question.topicId,
+          topicId: question.topicId,
+          isDueReview: true
+        };
+        
+        // Mark this flashcard as shown in the current session to avoid repetition
+        markFlashcardAsShown(userId, flashcardData.questionId);
+        
+        return res.json(flashcardData);
+      }
+    }
+    
+    // Priority 2: Check for due flashcard subtopics
+    const dueSubtopics = getDueFlashcardSubtopics(userId);
+    const sessionSubtopics = getSessionSubtopics(userId);
+    const completedSubtopics = getCompletedSubtopics(userId);
+    
+    // If no session exists, return error (user should start session first)
+    if (!sessionSubtopics || sessionSubtopics.length === 0) {
+      return res.status(400).json({ 
+        error: 'No active session. Please start a session first.',
+        requiresSession: true
+      });
+    }
+    
+    // Filter session subtopics: include due ones and exclude completed ones (unless due)
+    const eligibleSubtopics = sessionSubtopics.filter(subtopic => {
+      // Include if due for review
+      if (dueSubtopics.includes(subtopic)) {
+        return true;
+      }
+      // Exclude if completed and not due
+      if (completedSubtopics.includes(subtopic) && !dueSubtopics.includes(subtopic)) {
+        return false;
+      }
+      // Include if not completed
+      return true;
+    });
+    
+    if (eligibleSubtopics.length === 0) {
+      // All subtopics completed - suggest starting new session
+      return res.status(200).json({
+        message: 'All subtopics in this session are completed. Start a new session to continue.',
+        allCompleted: true,
+        sessionSubtopics
+      });
+    }
+    
+    // Get flashcard from eligible subtopics
+    const flashcard = getRandomFlashcardFromService(userId, eligibleSubtopics);
     
     if (!flashcard) {
-      return res.status(404).json({ error: 'No flashcards available' });
+      return res.status(404).json({ error: 'No flashcards available for selected subtopics' });
     }
+    
+    // Mark this flashcard as shown in the current session to avoid repetition
+    markFlashcardAsShown(userId, flashcard.questionId);
     
     return res.json(flashcard);
   } catch (err) {
@@ -247,12 +383,13 @@ export async function submitRating(req, res) {
  * GET /question/followup/:topic/:difficulty
  * Returns a follow-up question based on topic and difficulty
  * Respects per-user spaced repetition scheduling
- * Query params: ?subTopic=... (optional)
+ * Query params: ?subTopic=... (optional), ?flashcardQuestionId=... (optional)
  */
 export async function getFollowUpQuestionJson(req, res) {
   try {
     const { topic, difficulty } = req.params;
     const subTopic = req.query.subTopic || null;
+    const flashcardQuestionId = req.query.flashcardQuestionId || null;
     const userId = req.userId; // Set by optionalAuth middleware
     
     if (!topic || !difficulty) {
@@ -265,7 +402,7 @@ export async function getFollowUpQuestionJson(req, res) {
       return res.status(400).json({ error: 'Invalid difficulty. Must be Easy, Medium, or Hard.' });
     }
     
-    const question = getFollowUpQuestionFromJson(topic, difficulty, userId, subTopic);
+    const question = getFollowUpQuestionFromJson(topic, difficulty, userId, subTopic, flashcardQuestionId);
     
     if (!question) {
       return res.status(404).json({ error: 'No follow-up questions available for this topic and difficulty' });
@@ -280,9 +417,10 @@ export async function getFollowUpQuestionJson(req, res) {
 
 /**
  * POST /question/submit
- * Body: { questionId: string, selectedOption: string }
+ * Body: { questionId: string, selectedOption: string, flashcardQuestionId?: string, flashcardSubTopic?: string }
  * Returns: { correct: boolean, correctAnswer: string, explanation: string }
  * Updates per-user spaced repetition schedule
+ * Also marks flashcard subtopic as completed and sets next review date
  * Requires JWT authentication
  */
 export async function submitAnswer(req, res) {
@@ -293,7 +431,7 @@ export async function submitAnswer(req, res) {
       return res.status(401).json({ error: 'Authentication required' });
     }
     
-    const { questionId, selectedOption } = req.body;
+    const { questionId, selectedOption, flashcardQuestionId, flashcardSubTopic } = req.body;
     
     if (!questionId || !selectedOption) {
       return res.status(400).json({ error: 'Missing questionId or selectedOption' });
@@ -331,6 +469,19 @@ export async function submitAnswer(req, res) {
       nextReviewDate: nextReviewDate.toISOString(),
       timesReviewed
     });
+    
+    // If this is a follow-up question from a flashcard, mark the flashcard subtopic as completed
+    if (flashcardSubTopic && flashcardSubTopic.trim() !== '') {
+      // Get the difficulty from the flashcard rating (stored when rating was submitted)
+      const flashcardReview = flashcardQuestionId ? getUserReviewData(userId)[flashcardQuestionId] : null;
+      const ratingDifficulty = flashcardReview?.difficulty || 'medium';
+      
+      // Calculate next review date for subtopic based on follow-up answer correctness and rating difficulty
+      const subtopicNextReviewDate = calculateSubtopicNextReviewDate(result.correct, ratingDifficulty);
+      
+      // Mark subtopic as completed and set next review date
+      markSubtopicCompleted(userId, flashcardSubTopic, subtopicNextReviewDate.toISOString());
+    }
     
     return res.json(result);
   } catch (err) {
@@ -377,7 +528,7 @@ export async function getNextQuestion(req, res) {
     // Format as flashcard if it has flashcard field, otherwise format as question
     if (question.flashcard) {
       const topic = data.topics.find(t => t.id === question.topicId);
-      return res.json({
+      const flashcardData = {
         questionId: question.id,
         flashcard: question.flashcard,
         flashcardAnswer: question.flashcardAnswer,
@@ -385,7 +536,12 @@ export async function getNextQuestion(req, res) {
         subTopic: question.subTopic || topic?.name || question.topicId,
         topicId: question.topicId,
         isDueReview: true
-      });
+      };
+      
+      // Mark this flashcard as shown in the current session to avoid repetition
+      markFlashcardAsShown(userId, flashcardData.questionId);
+      
+      return res.json(flashcardData);
     } else {
       // Format as question
       const options = {};
