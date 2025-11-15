@@ -225,7 +225,8 @@ export async function getRandomFlashcardJson(req, res) {
           topic: topic ? topic.name : question.topicId,
           subTopic: question.subTopic || topic?.name || question.topicId,
           topicId: question.topicId,
-          isDueReview: true
+          isDueReview: true,
+          hint: topic?.hint || `Learn fundamental concepts and applications of ${topic ? topic.name : question.topicId}.`
         };
         
         // Mark this flashcard as shown in the current session to avoid repetition

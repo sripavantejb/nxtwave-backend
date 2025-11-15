@@ -633,5 +633,309 @@
       }
     },
     "createdAt": "2025-11-15T12:40:50.319Z"
+  },
+  "user_1763211148623_fkxfl9iyr": {
+    "name": "Sri Pavan Tej Balam",
+    "email": "zuqijugi@forexnews.bg",
+    "passwordHash": "$2b$10$PhopGVSf9ueJLjLdmIdKK.ikDgn3wBCqnw2tWUAeqmVLZol1pKagm",
+    "reviewData": {
+      "sessionSubtopics": [
+        "Number Systems",
+        "Power Cycle",
+        "Remainder Cycle",
+        "Percentages Basics",
+        "Percentages 1",
+        "Percentages 2"
+      ],
+      "shownFlashcards": [
+        "num-e-7",
+        "num-e-9",
+        "num-e-5"
+      ],
+      "num-e-7": {
+        "difficulty": "medium",
+        "lastAnswerCorrect": null,
+        "nextReviewDate": null,
+        "timesReviewed": 0
+      }
+    },
+    "createdAt": "2025-11-15T12:52:28.624Z"
+  },
+  "user_1763212215825_phnb6fzn0": {
+    "name": "234r",
+    "email": "1234r@gail.com",
+    "passwordHash": "$2b$10$Q6HF1Z5aqeFvJ3/bB62NYO.IA3xyZNQmJW4PDoGPnW611xnWIQzKS",
+    "reviewData": {
+      "sessionSubtopics": [
+        "Number Systems",
+        "Power Cycle",
+        "Remainder Cycle",
+        "Percentages Basics",
+        "Percentages 1",
+        "Percentages 2"
+      ],
+      "shownFlashcards": [
+        "num-m-7",
+        "per-h-2",
+        "num-e-6",
+        "num-m-1",
+        "per-e-3",
+        "per-m-3",
+        "per-h-1"
+      ],
+      "num-m-7": {
+        "difficulty": "easy",
+        "lastAnswerCorrect": null,
+        "nextReviewDate": null,
+        "timesReviewed": 0
+      },
+      "num-e-7": {
+        "difficulty": "easy",
+        "lastAnswerCorrect": false,
+        "nextReviewDate": "2025-11-16T13:10:53.326Z",
+        "timesReviewed": 1
+      },
+      "flashcardSubtopic": {
+        "Remainder Cycle": {
+          "nextReviewDate": "2025-11-16T13:10:53.331Z"
+        },
+        "Percentages 1": {
+          "nextReviewDate": "2025-11-22T13:11:35.603Z"
+        },
+        "Power Cycle": {
+          "nextReviewDate": "2025-11-20T13:12:05.871Z"
+        },
+        "Number Systems": {
+          "nextReviewDate": "2025-11-20T13:12:44.663Z"
+        }
+      },
+      "completedSubtopics": [
+        "Remainder Cycle",
+        "Percentages 1",
+        "Power Cycle",
+        "Number Systems"
+      ],
+      "per-h-2": {
+        "difficulty": "hard",
+        "lastAnswerCorrect": true,
+        "nextReviewDate": "2025-11-22T13:11:35.600Z",
+        "timesReviewed": 1
+      },
+      "num-e-6": {
+        "difficulty": "medium",
+        "lastAnswerCorrect": null,
+        "nextReviewDate": null,
+        "timesReviewed": 0
+      },
+      "num-m-6": {
+        "difficulty": "medium",
+        "lastAnswerCorrect": true,
+        "nextReviewDate": "2025-11-20T13:12:05.868Z",
+        "timesReviewed": 1
+      },
+      "num-m-1": {
+        "difficulty": "medium",
+        "lastAnswerCorrect": true,
+        "nextReviewDate": "2025-11-20T13:12:44.661Z",
+        "timesReviewed": 1
+      },
+      "per-m-3": {
+        "difficulty": "medium",
+        "lastAnswerCorrect": null,
+        "nextReviewDate": null,
+        "timesReviewed": 0
+      },
+      "per-h-1": {
+        "difficulty": "easy",
+        "lastAnswerCorrect": null,
+        "nextReviewDate": null,
+        "timesReviewed": 0
+      }
+    },
+    "createdAt": "2025-11-15T13:10:15.825Z"
+  },
+  "user_1763212570408_tfwisaw2h": {
+    "name": "Sri Pavan Tej Balam",
+    "email": "zuqiji@forexnews.bg",
+    "passwordHash": "$2b$10$lMYTAgM38eof0VQTaY5dYulrxCJuMIvUUcZGzqsCY6B1DwGpeY4ei",
+    "reviewData": {
+      "sessionSubtopics": [
+        "Number Systems",
+        "Power Cycle",
+        "Remainder Cycle",
+        "Percentages Basics",
+        "Percentages 1",
+        "Percentages 2"
+      ],
+      "shownFlashcards": [
+        "num-e-7",
+        "num-e-1",
+        "per-h-2",
+        "per-m-1",
+        "num-m-4",
+        "per-e-3",
+        "num-h-8",
+        "per-m-2",
+        "num-m-9",
+        "num-h-2",
+        "num-m-3",
+        "num-h-9",
+        "num-h-3",
+        "num-h-7",
+        "num-e-8",
+        "per-m-3",
+        "num-h-1",
+        "num-m-7",
+        "num-e-2",
+        "num-m-8"
+      ],
+      "per-m-1": {
+        "difficulty": "easy",
+        "lastAnswerCorrect": null,
+        "nextReviewDate": null,
+        "timesReviewed": 0
+      },
+      "per-e-1": {
+        "difficulty": "easy",
+        "lastAnswerCorrect": true,
+        "nextReviewDate": "2025-11-18T13:17:48.866Z",
+        "timesReviewed": 1
+      },
+      "flashcardSubtopic": {
+        "Percentages Basics": {
+          "nextReviewDate": "2025-11-18T13:17:48.868Z"
+        },
+        "Power Cycle": {
+          "nextReviewDate": "2025-11-16T13:18:05.883Z"
+        },
+        "Percentages 1": {
+          "nextReviewDate": "2025-11-20T13:18:34.488Z"
+        }
+      },
+      "completedSubtopics": [
+        "Percentages Basics",
+        "Power Cycle",
+        "Percentages 1"
+      ],
+      "num-m-4": {
+        "difficulty": "hard",
+        "lastAnswerCorrect": null,
+        "nextReviewDate": null,
+        "timesReviewed": 0
+      },
+      "num-h-4": {
+        "difficulty": "hard",
+        "lastAnswerCorrect": false,
+        "nextReviewDate": "2025-11-16T13:18:05.880Z",
+        "timesReviewed": 1
+      },
+      "per-m-2": {
+        "difficulty": "medium",
+        "lastAnswerCorrect": true,
+        "nextReviewDate": "2025-11-20T13:18:34.485Z",
+        "timesReviewed": 1
+      },
+      "num-h-2": {
+        "difficulty": "easy",
+        "lastAnswerCorrect": null,
+        "nextReviewDate": null,
+        "timesReviewed": 0
+      },
+      "per-m-3": {
+        "difficulty": "medium",
+        "lastAnswerCorrect": null,
+        "nextReviewDate": null,
+        "timesReviewed": 0
+      },
+      "num-e-2": {
+        "difficulty": "easy",
+        "lastAnswerCorrect": null,
+        "nextReviewDate": null,
+        "timesReviewed": 0
+      }
+    },
+    "createdAt": "2025-11-15T13:16:10.408Z"
+  },
+  "user_1763213007892_xgyi0j2rr": {
+    "name": "1234",
+    "email": "12345@gmail.com",
+    "passwordHash": "$2b$10$ektudXG8qjLo2mvN3eGOMeKuET/2DgIOl8y3HMtHdIyh0KnfbnxP.",
+    "reviewData": {
+      "sessionSubtopics": [
+        "Number Systems",
+        "Power Cycle",
+        "Remainder Cycle",
+        "Percentages Basics",
+        "Percentages 1",
+        "Percentages 2"
+      ],
+      "shownFlashcards": [
+        "num-e-4",
+        "num-h-9",
+        "num-m-9",
+        "per-m-2",
+        "num-m-3",
+        "per-e-2",
+        "per-e-3",
+        "num-e-2",
+        "per-h-1",
+        "num-e-3",
+        "per-m-1",
+        "num-h-1",
+        "num-m-1",
+        "num-h-3",
+        "per-h-2",
+        "per-h-3"
+      ],
+      "num-e-4": {
+        "difficulty": "easy",
+        "lastAnswerCorrect": true,
+        "nextReviewDate": "2025-11-18T13:24:16.788Z",
+        "timesReviewed": 1
+      },
+      "flashcardSubtopic": {
+        "Power Cycle": {
+          "nextReviewDate": "2025-11-18T13:24:16.791Z"
+        },
+        "Remainder Cycle": {
+          "nextReviewDate": "2025-11-22T13:24:54.070Z"
+        }
+      },
+      "completedSubtopics": [
+        "Power Cycle",
+        "Remainder Cycle"
+      ],
+      "num-h-9": {
+        "difficulty": "hard",
+        "lastAnswerCorrect": true,
+        "nextReviewDate": "2025-11-22T13:24:54.065Z",
+        "timesReviewed": 1
+      },
+      "num-m-9": {
+        "difficulty": "hard",
+        "lastAnswerCorrect": null,
+        "nextReviewDate": null,
+        "timesReviewed": 0
+      },
+      "per-e-2": {
+        "difficulty": "easy",
+        "lastAnswerCorrect": null,
+        "nextReviewDate": null,
+        "timesReviewed": 0
+      },
+      "num-h-1": {
+        "difficulty": "easy",
+        "lastAnswerCorrect": null,
+        "nextReviewDate": null,
+        "timesReviewed": 0
+      },
+      "num-h-3": {
+        "difficulty": "hard",
+        "lastAnswerCorrect": null,
+        "nextReviewDate": null,
+        "timesReviewed": 0
+      }
+    },
+    "createdAt": "2025-11-15T13:23:27.895Z"
   }
 }

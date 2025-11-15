@@ -104,7 +104,8 @@ export function getRandomFlashcard(userId = null, allowedSubtopics = null) {
         flashcardAnswer: question.flashcardAnswer,
         topic: topic ? topic.name : question.topicId,
         subTopic: question.subTopic || topic?.name || question.topicId,
-        topicId: question.topicId
+        topicId: question.topicId,
+        hint: topic?.hint || `Learn fundamental concepts and applications of ${topic ? topic.name : question.topicId}.`
       };
     }
     
@@ -129,7 +130,8 @@ export function getRandomFlashcard(userId = null, allowedSubtopics = null) {
       flashcardAnswer: question.flashcardAnswer,
       topic: topic ? topic.name : question.topicId,
       subTopic: question.subTopic || topic?.name || question.topicId,
-      topicId: question.topicId
+      topicId: question.topicId,
+      hint: topic?.hint || `Learn fundamental concepts and applications of ${topic ? topic.name : question.topicId}.`
     };
   }
   
@@ -144,7 +146,8 @@ export function getRandomFlashcard(userId = null, allowedSubtopics = null) {
     flashcardAnswer: question.flashcardAnswer,
     topic: topic ? topic.name : question.topicId,
     subTopic: question.subTopic || topic?.name || question.topicId,
-    topicId: question.topicId
+    topicId: question.topicId,
+    hint: topic?.hint || `Learn fundamental concepts and applications of ${topic ? topic.name : question.topicId}.`
   };
 }
 
