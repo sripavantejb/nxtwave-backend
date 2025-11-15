@@ -42,7 +42,10 @@ export function toFlashcardPayload(question, topicMeta) {
     options,
     answerIndex,
     answerText,
-    explanation: question.explanation
+    explanation: question.explanation,
+    subTopic: question.subTopic || '',
+    flashcard: question.flashcard || '',
+    flashcardAnswer: question.flashcardAnswer || ''
   };
 }
 

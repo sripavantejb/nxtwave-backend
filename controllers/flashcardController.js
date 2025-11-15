@@ -5,6 +5,17 @@ import {
   pickFollowUpQuestion,
   toFlashcardPayload
 } from '../services/flashcardService.js';
+import {
+  getRandomFlashcard as getRandomFlashcardFromJson,
+  mapRatingToDifficulty,
+  getFollowUpQuestion as getFollowUpQuestionFromJson,
+  validateAnswer as validateAnswerFromJson,
+  getQuestionById
+} from '../services/flashcardJsonService.js';
+import { updateReviewSchedule } from '../utils/reviewSchedule.js';
+import { updateUserReviewData, getUserReviewData } from '../services/userService.js';
+import { calculateNextReviewDate, getAllDueQuestions } from '../services/spacedRepService.js';
+import { loadQuestions } from '../services/flashcardJsonService.js';
 
 let cachedTopicMap = null;
 let cachedTopicTimestamp = 0;
@@ -67,7 +78,14 @@ export async function getRandomFlashcard(req, res) {
       questions = await findQuestions();
     }
 
-    const picked = pickRandomQuestion(questions);
+    // Filter to only include questions that have a flashcard field
+    const flashcardQuestions = questions.filter(q => q.flashcard && q.flashcard.trim() !== '');
+
+    if (flashcardQuestions.length === 0) {
+      return res.status(404).json({ error: 'No flashcards available' });
+    }
+
+    const picked = pickRandomQuestion(flashcardQuestions);
     const topicMap = await getTopicMap();
     const topicMeta = picked ? topicMap.get(picked.topicId) : null;
 
@@ -111,4 +129,412 @@ export async function getFollowUpFlashcard(req, res) {
   }
 }
 
+// ============== NEW JSON-BASED ENDPOINTS ==============
+
+/**
+ * GET /flashcard/random-json
+ * Returns a random flashcard from questions.json
+ * Supports authenticated users for per-user tracking
+ */
+export async function getRandomFlashcardJson(req, res) {
+  try {
+    const userId = req.userId; // Set by optionalAuth middleware
+    const flashcard = getRandomFlashcardFromJson(userId);
+    
+    if (!flashcard) {
+      return res.status(404).json({ error: 'No flashcards available' });
+    }
+    
+    return res.json(flashcard);
+  } catch (err) {
+    console.error('Error fetching random flashcard:', err);
+    return res.status(500).json({ error: 'Failed to fetch flashcard' });
+  }
+}
+
+/**
+ * POST /flashcard/rate
+ * Body: { questionId: string, difficulty: number (1-5) }
+ * Updates per-user spaced repetition schedule based on difficulty rating
+ * Returns: { difficulty: "Easy"|"Medium"|"Hard" }
+ * @deprecated Use submitRating instead (requires JWT)
+ */
+export async function rateFlashcard(req, res) {
+  try {
+    const { questionId, difficulty } = req.body;
+    const userId = req.userId; // Set by optionalAuth middleware
+    
+    if (!questionId) {
+      return res.status(400).json({ error: 'questionId is required' });
+    }
+    
+    if (!difficulty || typeof difficulty !== 'number' || difficulty < 1 || difficulty > 5) {
+      return res.status(400).json({ error: 'Invalid difficulty. Must be a number between 1 and 5.' });
+    }
+    
+    const difficultyLevel = mapRatingToDifficulty(difficulty);
+    
+    // Update user's review data if authenticated
+    if (userId) {
+      const existingReview = getUserReviewData(userId)[questionId];
+      
+      updateUserReviewData(userId, questionId, {
+        difficulty: difficultyLevel.toLowerCase(),
+        lastAnswerCorrect: null, // Not applicable for rating
+        nextReviewDate: null, // Will be set after follow-up answer
+        timesReviewed: existingReview ? existingReview.timesReviewed : 1
+      });
+    } else {
+      // Fallback to global review schedule if not authenticated
+      updateReviewSchedule(questionId, difficultyLevel, true);
+    }
+    
+    return res.json({ difficulty: difficultyLevel });
+  } catch (err) {
+    console.error('Error rating flashcard:', err);
+    return res.status(500).json({ error: 'Failed to rate flashcard' });
+  }
+}
+
+/**
+ * POST /flashcard/submit-rating
+ * Body: { questionId: string, rating: number (1-5) }
+ * Requires JWT authentication
+ * Stores flashcard rating in user's reviewData
+ * Returns: { difficulty: "Easy"|"Medium"|"Hard" }
+ */
+export async function submitRating(req, res) {
+  try {
+    const userId = req.userId; // Set by authenticateUser middleware (required)
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    const { questionId, rating } = req.body;
+    
+    if (!questionId) {
+      return res.status(400).json({ error: 'questionId is required' });
+    }
+    
+    if (!rating || typeof rating !== 'number' || rating < 1 || rating > 5) {
+      return res.status(400).json({ error: 'Invalid rating. Must be a number between 1 and 5.' });
+    }
+    
+    // Map rating to difficulty
+    const difficultyLevel = mapRatingToDifficulty(rating);
+    
+    // Get existing review data
+    const existingReview = getUserReviewData(userId)[questionId];
+    
+    // Store rating in reviewData (without nextReviewDate - will be set after follow-up answer)
+    // Don't increment timesReviewed yet - only after follow-up answer
+    updateUserReviewData(userId, questionId, {
+      difficulty: difficultyLevel.toLowerCase(),
+      lastAnswerCorrect: null, // Not applicable for rating
+      nextReviewDate: null, // Will be set after follow-up answer
+      timesReviewed: existingReview ? existingReview.timesReviewed : 0 // Set to 0 for rating, will be set to 1 after answer
+    });
+    
+    return res.json({ difficulty: difficultyLevel });
+  } catch (err) {
+    console.error('Error submitting rating:', err);
+    return res.status(500).json({ error: 'Failed to submit rating' });
+  }
+}
+
+/**
+ * GET /question/followup/:topic/:difficulty
+ * Returns a follow-up question based on topic and difficulty
+ * Respects per-user spaced repetition scheduling
+ * Query params: ?subTopic=... (optional)
+ */
+export async function getFollowUpQuestionJson(req, res) {
+  try {
+    const { topic, difficulty } = req.params;
+    const subTopic = req.query.subTopic || null;
+    const userId = req.userId; // Set by optionalAuth middleware
+    
+    if (!topic || !difficulty) {
+      return res.status(400).json({ error: 'Missing topic or difficulty parameter' });
+    }
+    
+    // Validate difficulty
+    const validDifficulties = ['Easy', 'Medium', 'Hard'];
+    if (!validDifficulties.includes(difficulty)) {
+      return res.status(400).json({ error: 'Invalid difficulty. Must be Easy, Medium, or Hard.' });
+    }
+    
+    const question = getFollowUpQuestionFromJson(topic, difficulty, userId, subTopic);
+    
+    if (!question) {
+      return res.status(404).json({ error: 'No follow-up questions available for this topic and difficulty' });
+    }
+    
+    return res.json(question);
+  } catch (err) {
+    console.error('Error fetching follow-up question:', err);
+    return res.status(500).json({ error: 'Failed to fetch follow-up question' });
+  }
+}
+
+/**
+ * POST /question/submit
+ * Body: { questionId: string, selectedOption: string }
+ * Returns: { correct: boolean, correctAnswer: string, explanation: string }
+ * Updates per-user spaced repetition schedule
+ * Requires JWT authentication
+ */
+export async function submitAnswer(req, res) {
+  try {
+    const userId = req.userId; // Set by authenticateUser middleware (required)
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    const { questionId, selectedOption } = req.body;
+    
+    if (!questionId || !selectedOption) {
+      return res.status(400).json({ error: 'Missing questionId or selectedOption' });
+    }
+    
+    const result = validateAnswerFromJson(questionId, selectedOption);
+    
+    if (result.error) {
+      return res.status(404).json(result);
+    }
+    
+    // Get the actual question to determine its real difficulty
+    const question = getQuestionById(questionId);
+    let actualDifficulty = 'medium'; // default (lowercase for storage)
+    
+    if (question) {
+      actualDifficulty = question.difficulty; // Already lowercase
+    }
+    
+    // Calculate next review date using spaced repetition service
+    const nextReviewDate = calculateNextReviewDate(result.correct, actualDifficulty);
+    
+    // Get existing review data
+    const existingReview = getUserReviewData(userId)[questionId];
+    
+    // Calculate timesReviewed - increment if exists, otherwise set to 1
+    const timesReviewed = existingReview && existingReview.timesReviewed 
+      ? existingReview.timesReviewed + 1 
+      : 1;
+    
+    // Update user's reviewData (immediate persistence)
+    updateUserReviewData(userId, questionId, {
+      difficulty: actualDifficulty,
+      lastAnswerCorrect: result.correct,
+      nextReviewDate: nextReviewDate.toISOString(),
+      timesReviewed
+    });
+    
+    return res.json(result);
+  } catch (err) {
+    console.error('Error submitting answer:', err);
+    return res.status(500).json({ error: 'Failed to submit answer' });
+  }
+}
+
+/**
+ * GET /flashcards/next-question
+ * Returns the next question for logged-in user (prioritizes due reviews)
+ * Requires JWT authentication
+ */
+export async function getNextQuestion(req, res) {
+  try {
+    const userId = req.userId; // Set by authenticateUser middleware (required)
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    // Get all due questions for user
+    const dueQuestionIds = getAllDueQuestions(userId);
+    
+    if (dueQuestionIds.length === 0) {
+      // No due questions - return empty (continue with flashcard flow)
+      return res.status(204).send(); // 204 No Content
+    }
+    
+    // Load all questions
+    const data = loadQuestions();
+    
+    // Find questions that are due
+    const dueQuestions = data.questions.filter(q => dueQuestionIds.includes(q.id));
+    
+    if (dueQuestions.length === 0) {
+      return res.status(204).send(); // 204 No Content
+    }
+    
+    // Pick random due question
+    const randomIndex = Math.floor(Math.random() * dueQuestions.length);
+    const question = dueQuestions[randomIndex];
+    
+    // Format as flashcard if it has flashcard field, otherwise format as question
+    if (question.flashcard) {
+      const topic = data.topics.find(t => t.id === question.topicId);
+      return res.json({
+        questionId: question.id,
+        flashcard: question.flashcard,
+        flashcardAnswer: question.flashcardAnswer,
+        topic: topic ? topic.name : question.topicId,
+        subTopic: question.subTopic || topic?.name || question.topicId,
+        topicId: question.topicId,
+        isDueReview: true
+      });
+    } else {
+      // Format as question
+      const options = {};
+      const optionLabels = ['A', 'B', 'C', 'D'];
+      question.options.forEach((opt, idx) => {
+        if (idx < optionLabels.length) {
+          options[optionLabels[idx]] = opt;
+        }
+      });
+      
+      return res.json({
+        questionId: question.id,
+        question: question.question,
+        options,
+        key: optionLabels[question.answerIndex] || 'A',
+        explanation: question.explanation,
+        difficulty: question.difficulty,
+        topic: question.topicId,
+        isDueReview: true
+      });
+    }
+  } catch (err) {
+    console.error('Error fetching next question:', err);
+    return res.status(500).json({ error: 'Failed to fetch next question' });
+  }
+}
+
+/**
+ * GET /flashcards/due-reviews
+ * Returns all questions due for review for authenticated user
+ * Requires JWT authentication
+ */
+export async function getDueReviews(req, res) {
+  try {
+    const userId = req.userId; // Set by authenticateUser middleware (required)
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    // Get all due questions for user
+    const dueQuestionIds = getAllDueQuestions(userId);
+    
+    if (dueQuestionIds.length === 0) {
+      return res.json({ dueQuestions: [], count: 0 });
+    }
+    
+    // Load all questions and review data
+    const data = loadQuestions();
+    const reviewData = getUserReviewData(userId);
+    
+    // Build response with question details and review metadata
+    const dueQuestions = dueQuestionIds.map(questionId => {
+      const question = data.questions.find(q => q.id === questionId);
+      const review = reviewData[questionId];
+      
+      if (!question) {
+        return null;
+      }
+      
+      return {
+        questionId: question.id,
+        question: question.question,
+        topicId: question.topicId,
+        difficulty: review?.difficulty || question.difficulty,
+        timesReviewed: review?.timesReviewed || 0,
+        lastAnswerCorrect: review?.lastAnswerCorrect,
+        nextReviewDate: review?.nextReviewDate
+      };
+    }).filter(q => q !== null);
+    
+    return res.json({
+      dueQuestions,
+      count: dueQuestions.length
+    });
+  } catch (err) {
+    console.error('Error fetching due reviews:', err);
+    return res.status(500).json({ error: 'Failed to fetch due reviews' });
+  }
+}
+
+/**
+ * GET /flashcards/concepts
+ * Returns all flashcards/concepts from CSV file grouped by topic
+ * Used for conceptual learning flow
+ */
+export async function getConcepts(req, res) {
+  try {
+    console.log('Fetching concepts from CSV file...');
+    const data = loadQuestions();
+    
+    if (!data || !data.questions || data.questions.length === 0) {
+      console.error('No questions loaded from CSV file');
+      return res.status(404).json({ error: 'No questions found in CSV file' });
+    }
+    
+    console.log(`Loaded ${data.questions.length} questions from CSV`);
+    
+    // Filter questions that have flashcard data
+    const questionsWithFlashcards = data.questions.filter(
+      q => q.flashcard && q.flashcard.trim() !== '' && q.flashcardAnswer && q.flashcardAnswer.trim() !== ''
+    );
+    
+    console.log(`Found ${questionsWithFlashcards.length} questions with flashcard data`);
+    
+    if (questionsWithFlashcards.length === 0) {
+      return res.status(404).json({ error: 'No concepts available in CSV file. Ensure the CSV has Flashcard and Answer columns filled.' });
+    }
+    
+    // Group by topic and create concept objects
+    const conceptsByTopic = new Map();
+    
+    for (const question of questionsWithFlashcards) {
+      const topicId = question.topicId;
+      
+      if (!conceptsByTopic.has(topicId)) {
+        const topic = data.topics.find(t => t.id === topicId);
+        conceptsByTopic.set(topicId, {
+          topicId,
+          topicName: topic ? topic.name : topicId,
+          concepts: []
+        });
+      }
+      
+      const concept = {
+        id: question.id,
+        question: question.flashcard,
+        answer: question.flashcardAnswer,
+        explanation: question.explanation || '',
+        topicId: question.topicId,
+        subTopic: question.subTopic || '',
+        difficulty: question.difficulty
+      };
+      
+      conceptsByTopic.get(topicId).concepts.push(concept);
+    }
+    
+    // Convert to array and flatten concepts
+    const allConcepts = Array.from(conceptsByTopic.values())
+      .flatMap(topicGroup => topicGroup.concepts.map(concept => ({
+        ...concept,
+        topicName: topicGroup.topicName
+      })));
+    
+    console.log(`Returning ${allConcepts.length} concepts from CSV`);
+    return res.json({ concepts: allConcepts });
+  } catch (err) {
+    console.error('Error fetching concepts from CSV:', err);
+    return res.status(500).json({ error: `Failed to fetch concepts: ${err.message}` });
+  }
+}
 

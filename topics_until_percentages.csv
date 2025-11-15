@@ -1,0 +1,491 @@
+Topic,Sub-Topic,Flashcard,Answer,Question,Difficulty level,Option A,Option B,Option C,Option D,Key,Explanation
+Number Systems,Number Systems,Do you know the divisibility rules in Number Systems?,"Divisible by 2 → If the number ends with 0, 2, 4, 6, or 8 (i.e., even).
+Divisible by 3 → If the sum of its digits is divisible by 3.
+Divisible by 5 → If the number ends with 0 or 5.
+Divisible by 9 → If the sum of digits is divisible by 9.
+Divisible by 11 → If the difference between sum of digits at odd and even positions is divisible by 11.","When 10082 is divided by 3, what is the remainder?",Easy,0,1,2,3,Option C,"To find the remainder when 10082 is divided by 3, you can use the divisibility rule for 3, which states that the remainder of a number divided by 3 is the same as the remainder of the sum of its digits divided by 3.  
+  
+Sum the digits of 10082:1+0+0+8+2=11  
+Divide the sum (11) by 3:$\dfrac{11}{3}$ = remainder 2  
+  
+The remainder when 10082 is divided by 3 is 2."
+,,,,Which of the following numbers is divisible by 7?,Medium,1112,1342,1435,1263,Option C,"Divisibility rule of 7:
+
+Take the last digit of the number. Double it.
+Subtract this doubled value from the remaining part of the number (the number without its last digit).
+If the result is 0 or divisible by 7, then the original number is divisible by 7.
+If it’s still large, repeat the process.
+
+Let's apply this rule to the given numbers,  
+Option-A: 1112  
+Last digit: 2  
+Remaining part: 111  
+2 × 2 = 4  
+111 - 4 = 107  
+107 is not divisible by 7, so 1112 is not divisible by 7.  
+  
+Option-B: 1342  
+Last digit: 2  
+Remaining part: 134  
+2 × 2 = 4  
+134 - 4 = 130  
+130 is not divisible by 7, so 1342 is not divisible by 7.  
+  
+Option-C: 1435  
+Last digit: 5  
+Remaining part: 143  
+2 × 5 = 10  
+143 - 10 = 133  
+133 is divisible by 7, so 1435 is divisible by 7.  
+  
+Option-D: 1263  
+Last digit: 3  
+Remaining part: 126  
+2 × 3 = 6  
+126 - 6 = 120  
+120 is not divisible by 7, so 1263 is not divisible by 7.  
+Therefore, out of the given numbers, 1435 is the one that is divisible by 7."
+,,,,"Find M and N if the number M39048458N is divisible by 11 and 8, where M and N are single digit numbers?",Hard,"1, 4","2, 3","3, 4","6, 4",Option D,"As per the divisibility rule of 8, the last 3 numbers should be divisible by 8  
+58N should be divisible by 8, the least possible value of N will be 4.
+Now the number is M390484584. 
+For number M390484584 divisible by 11, The difference between the sum of odd place digits and even place digits should be divisible by 11 or the difference is 0.  
+Odd place digits sum= M+9+4+4+8=M+25  
+Even place digits sum= 3+0+8+5+4= 20  
+M + 25 - 20= M+5=11,
+M = 6.  
+There is only one possibility which is M=6 and N=4."
+,,Do you know the value of an imaginary number?,"The value of i in mathematics is the imaginary unit:
+
+i = $\sqrt{-1}$
+
+From this definition, we get the cyclic pattern:
+$i^1 = i$
+$i^2 = -1$
+$i^3 = -i$
+$i^4 = 1$",What is the value of $(i)^{64}$?,Easy,1,-1,0,None,Option A,"The value of $i^{64}$ can be calculated by repeatedly multiplying i by itself:
+$i^1$ = i
+$i^2$ = -1
+$i^3$ = -i 
+$i^4$ = 1
+
+After every four powers of i, the pattern repeats. So,
+
+$i^{64} = i^{4 \times 16}$ = $(i^4)^{16} = 1^{16}$ = 1
+
+Therefore, $i^{64} = 1$."
+,,,,What is the value of ${i}^{48}$ + 1 ?,Medium,0,2,1,-1,Option B,"To find ${i}^{48}$  
+Where i is the imaginary unit:  
+We know that,  
+  
+$i^0 =1, i^1 = \sqrt{(-1)}$, ${i}^{2}$ = -1, ${i}^{3}$ = -i, ${i}^{4}$ = 1  
+  
+And the cycle repeats for every 4 powers:  
+So, the powers of i form a mod 4 cycle.  
+Now, divide the exponent by 4:  
+  
+48 ÷ 4 = 12 remainder 0  
+  
+So, ${i}^{48}$ = ${i}^{0}$ = 1  
+${i}^{48}$ + 1  
+= 1 + 1 = 2  
+  
+Hence, ${i}^{48}$ + 1 = 2"
+,,,,"If $(-1)^{n} +(-1)^{4n}$ = 0, then n is ?",Hard,Any positive integer,Any odd natural number,Any negative integer,Any even natural number,Option B,"To find the value of ""n"" when $(-1)^{n} +(-1)^{4n}$ = 0, you can break it down and simplify it,  
+$(-1)^{n}$ represents a sequence of alternating signs: 1, -1, 1, -1, ...  
+$(-1)^{4n}$ represents a sequence where the exponent is always even, so its result is 1.
+ 
+Now, you have the equation:  
+$(-1)^{n}$ + 1 = 0  
+$(-1)^{n}$ = -1
+  
+Now, if you think about the alternating sign pattern of $(-1)^{n}$, you'll notice that it becomes -1 when ""n"" is an odd positive integer, and it becomes 1 when ""n"" is an even positive integer.
+  
+So, for $(-1)^{n}$ to equal -1, ""n"" must be an odd positive integer.  
+In summary, ""n"" is any odd natural number."
+,,Do you remember how a number can be expressed in rational form?,"The Rational Form means expressing a number as a ratio of two integers:
+
+Rational number = $\dfrac{p}{q}$ ; $q \neq 0$",What is the rational form of 4.88888888...?,Easy,$\frac{44}{9}$,$\frac{48}{9}$,$\frac{47}{9}$,$\frac{46}{9}$,Option A,"Let x = 4.888888....  
+10x = 48.888888...  
+Now, subtract the original equation from the new equation to eliminate the repeating part:  
+10x - x = 48.8888888... - 4.88888888...  
+9x = 44    
+x = $\dfrac{44}{9}$  
+  
+So, the rational form of the recurring decimal 4.88888.... is $\dfrac{44}{9}$"
+,,,,What is the rational form of 2.454545… ?,Medium,22/9,242/99,243/99,244/99,Option C,"Let x = 2.454545…
+Here the repeating block is “45”, which has 2 digits.
+Multiply by 100: 100x = 245.454545…
+Subtract: (100x – x) = (245.454545… – 2.454545…)
+This gives 99x = 243.
+So x = 243/99.
+Therefore, the rational form of 2.4545… is 243/99."
+,,,,What is the  simplest Rational form of 8.88888888....?,Hard,$\frac{79}{9}$,$\frac{77}{9}$,$\frac{80}{9}$,9,Option C,"Let x = 8.88888888....
+
+Then 10x = 88.8888888....
+
+Subtract x from 10x,
+10x - x = (88.8888888....) - (8.88888888....)
+9x = 80
+
+x = $\dfrac{80}{9}$
+
+Hence, simplest Rational form of 8.88888888.... is $\dfrac{80}{9}$"
+,Power Cycle,Do you remember what cyclicity means in power cycles?,"Cyclicity in power cycle means the repetition pattern of the unit digits when a number is raised to successive powers.
+
+Example: 
+Clicity of 2 is 4 (pattern: 2, 4, 8, 6).
+cyclicity of 3 is 4 (pattern: 3, 9, 7, 1).
+Cyclicity of 7 is 4 (pattern: 7, 9, 3, 1)",Find the unit digit of $3^{11}$.,Easy,4,6,8,7,Option D,"Cyclicity of 3 = 4 → 11÷4 = 2 remainder 3
+unit digit = 7"
+,,,,Find the units digit of $(11!)^{789}$,Medium,1,2,0,3,Option C,"To find the units digit of $(11!)^{789}$ 
+We need to take the factorial of 11, raise it to the 789th power, and find the last digit (units digit) of that huge number.
+
+Now,  
+$11! = 11 \times 10 \times 9 \times 8 \times \cdots \times 2 \times 1$
+
+That means $11!$ includes both 2 and 5 as factors.  
+For example:  
+5 and 10 → contribute factors of 5  
+2, 4, 6, 8, 10 → contribute factors of 2
+
+So, $11!$ definitely contains at least one factor of 10, and hence ends with 0.
+
+Now, unit place of $(11!)^{789}$ means $0^{789}$
+
+$0^{789} = 0$
+
+Hence, the units digit of $(11!)^{789}$ is 0."
+,,,,Find the unit digit of $(256489)^{248647662}$ ?,Hard,9,1,3,Can't be determine,Option B,"The last digit depends only on the base’s last digit.
+
+Base last digit = 9
+Powers of 9 cycle with period 2: 9,1,9,1,…9, 1, 9, 1, \dots
+Exponent 248,647,662248{,}647{,}662 is even → take the 2nd item of the cycle
+Unit digit = 1"
+,,Do you remember what the unit digit of a number represents?,"The unit digit of a number is the right most value of the number.
+
+Examples:
+
+For 457, the right-most value is 7.
+
+For 9826, the right-most value is 6.
+
+For 1035, the right-most value is 5.",What is the last digit of ${3}^{45}$?,Easy,3,6,7,8,Option A,"To find ${3}^{45}$, we need to know the Power cycle of 3:
+
+$3^1$ = 3 , (last digit = 3)  
+$3^2$ = 9 , (last digit = 9)  
+$3^3$ = 27 , (last digit = 7)  
+$3^4$ = 81 , (last digit = 1)  
+$3^5$ = 243 (last digit = 3)  
+
+We observe that the last digit repeats every 4 powers in the cycle i.e (3, 9, 7, 1)  
+
+Now, divide the exponent 45 by the cycle length 4:  
+  
+$45 \div 4 = 11$ - remainder 1  
+  
+So, $3^{45}$ has the same last digit as ( $3^1$ \),  
+Hence, the digit of $3^{45}$ is 3."
+,,,,Find the units digit of $7^{2023}$.,Medium,2,3,4,6,Option B,"To find ${7}^{2023}$, we need to know the Power cycle of 7:  
+  
+$7^1$ = 7 , (last digit = 7)  
+$7^2$ = 49 , (last digit = 9)  
+$7^3$ = 343 , (last digit = 3)  
+$7^4$ = 2401 , (last digit = 1)  
+$7^5$ = 16807 , (last digit = 7)  
+  
+We observe that the last digit repeats every 4 powers in the cycle i.e (7, 9, 3, 1)  
+  
+Now, divide the exponent 2023 by the cycle length 4:  
+  
+$2023 \div 4 = 505$ – remainder 3  
+  
+So, $7^{2023}$ has the same last digit as ($7^3$),  
+Hence, the digit of $7^{2023}$ is 3."
+,,,,What is the last digit of $1234^{5678}$?,Hard,2,3,6,8,Option C,"To find the units digit (i.e., the last digit) of $1234^{5678}$  
+We need to find the last digit of a huge number generated by raising 1234 to the 5678th power.
+
+Now, we should consider the last digit of the base,   
+Last digit of 1234 is 4
+
+So, we are essentially finding the units digit of $4^{5678}$
+
+Let’s observe the pattern of unit digits in powers of 4:
+
+$4^1$ = 4 (last digit = 4)  
+$4^2$ = 16 (last digit = 6)  
+$4^3$ = 64 (last digit = 4)  
+$4^4$ = 256 (last digit = 6)
+
+So, the cycle of 4 is: (4, 6) — length = 2
+
+Now, divide the exponent 5678 by the cycle length:
+
+$5678 \div 2 = 2839$ remainder 0
+
+So, $4^{5678}$ has the same last digit as $4^2 = 16$  
+Hence, the units digit is 6"
+,,Do you remember what trailing zeros in a number represent?,"Zeros at the end of a number due to factors of 10.
+
+Examples:
+
+1200 → has 2 trailing zeros.
+
+504000 → has 3 trailing zeros.
+
+100000 → has 5 trailing zeros.",Find the number of zeros in last of the resultant :- (57 x 39 x 89 x 71),Easy,1,0,2,3,Option B,"Product of odd numbers will never result in zero's in the last.
+
+Therefore, the number of zeros in this resultant is 0."
+,,,,Find the number of zeros in last of the resultant (55 x 42 x 85 x 70 x 26)?,Medium,0,1,2,3,Option D,"To find the number of zeros at the end of the product (55 x 42 x 85 x 70 x 26), we need to count the factors of 10 in the product. Each factor of 10 is made up of a factor of 2 and a factor of 5.  
+  
+Count the factors of 5:  
+  
+55 has 1 factor of 5.  
+42 has 0 factors of 5.  
+85 has 1 factor of 5.  
+70 has 1 factor of 5.  
+26 has 0 factors of 5.  
+Total factors of 5 = 3.  
+  
+Count the factors of 2:  
+  
+55 has 0 factors of 2.  
+42 has 1 factor of 2.  
+85 has 0 factors of 2.  
+70 has 1 factors of 2.  
+26 has 1 factor of 2.  
+Total factors of 2 = 3  
+  
+The number of zeros is the minimum of the total factors of 2 and 5:  
+  
+Minimum of 2 and 5 is 3.  
+  
+Therefore, the number of zeros at the end of the product is 3."
+,,,,Determine the rightmost non zero digit of $650^{876}$.,Hard,2,3,7,5,Option D,"To find the rightmost non-zero digit of $650^{876}$.  
+This is not the same as the units digit, because $650^{876}$ ends with several zeros due to factors of 10.  
+We want the digit just before those trailing zeros.  
+First, write 650 as a product of prime factors:  
+  
+$650 = 2 \times 5^2 \times 13$  
+  
+So, $650^{876} = (2 \times 5^2 \times 13)^{876} = 2^{876} \times 5^{1752} \times 13^{876}$  
+  
+Each pair of $2 \times 5$ contributes a factor of 10, which gives a trailing zero.  
+The number of such pairs is $\min(876, 1752) = 876$  
+  
+That means $650^{876}$ ends in 876 zeros.  
+  
+To find the rightmost non-zero digit, we remove those zeros and focus on:  
+  
+$\dfrac{650^{876}}{10^{876}} = \dfrac{2^{876} \times 5^{1752} \times 13^{876}}{10^{876}} = \dfrac{(2 \times 5)^{876} \times 5^{876} \times 13^{876}}{10^{876}} = 5^{876} \times 13^{876}$  
+  
+Now we find the units digit of $13^{876}$.  
+  
+Observe the pattern of last digits of powers of 13:  
+  
+$13^1 = 13$ → last digit is 3  
+$13^2 = 169$ → last digit is 9  
+$13^3 = 2197$ → last digit is 7  
+$13^4 = 28561$ → last digit is 1  
+  
+So the cycle is (3, 9, 7, 1), repeating every 4 powers.  
+  
+Now divide $876 \div 4 = 219$ remainder 0  
+  
+So, $13^{876}$ ends with the same digit as $13^4$, which is 1.  
+  
+Now multiply with $5^{876}$.  
+  
+$5^1 = 5$  
+$5^2 = 25$  
+$5^3 = 125$  
+  
+All powers of 5 (ignoring zeros) end in 5.  
+  
+So the last non-zero digit of $5^{876} \times 13^{876}$ is the same as that of $5 \times 1 = 5$  
+  
+Hence, the rightmost non-zero digit of $650^{876}$ is 5."
+,Remainder Cycle,"Do you remember the formula that connects dividend, divisor, quotient, and remainder?","Dividend = Divisor x Quotient + Remainder
+
+Examples:
+
+17 ÷ 5
+17 = (5 × 3) + 2
+Remainder = 2
+
+29 ÷ 6
+29 = (6 × 4) + 5
+Remainder = 5",What is the quotient when 18 is divided by 6?,Easy,3,2,4,5,Option A,"18 ÷ 6 = 3
+So, the quotient is 3"
+,,,,Find the remainder when 20 × 10 × 30 is divided by 3.,Medium,0,1,2,3,Option A,"To find the remainder when 20 × 10 × 30 is divided by 3:  
+First, divide the numbers individually by 3 to get remainders:  
+20 ÷ 3 = 2 
+10 ÷ 3 = 1
+30 ÷ 3 = 0 
+Now multiply them:  
+2 × 1 × 0 = 0
+So, the remainder is 0"
+,,,,Find the remainder when $3^{21}$ is divided by 5.  ,Hard,3,2,4,5,Option A,"To find the remainder when $3^{21}$ is divided by 5.  
+Let's observe the pattern of powers of 3 divided by 5:  
+$3^1$ = $\frac{3}{5}$ = 3  (remainder)
+$3^2$ = $\frac{9}{5}$= 4  (remainder)
+$3^3$ = 2  
+$3^4$ = 1  
+$3^5$ = 3  
+  
+So the cycle is 3, 4, 2, 1 and it repeats every 4 terms.  
+  
+Now divide the exponent 21 by the cycle length 4:  
+21 ÷ 4 = 5 remainder 1  
+  
+So, $3^{21}$ will have the same remainder as $3^1$ when divided by 5.  
+And $3^1$ = 3  
+  
+Hence, the remainder when $3^{21}$ is divided by 5 is 3."
+,,Do you remember what is formed by the remainders of successive powers?,"The repeating pattern formed by remainders in successive powers.
+
+Examples:
+
+2 mod 3:
+2¹ mod 3 = 2 ; 2² mod 3 = 1 ; 2³ mod 3 = 2 (repeats)
+Cycle = 2, 1
+
+5 mod 7:
+5¹ mod 7 = 5 ; 5² mod 7 = 4 ; 5³ mod 7 = 6 ; 5⁴ mod 7 = 2 ; 5⁵ mod 7 = 3 ;5⁶ mod 7 = 1
+Cycle = 5, 4, 6, 2, 3, 1",What is the remainder when $4^5$ is divided by 15?  ,Easy,3,2,1,4,Option D,"To find the remainder when $4^5$ is divided by 15.  
+Let's observe the pattern of powers of 4 divided by 15:  
+$4^1$ = $\frac{4}{15}$ = 4  (remainder)
+$4^2$ = $\frac{16}{15}$ = 1  (remainder)
+$4^3$ = $\frac{64}{15}$ = 4  (remainder)
+$4^4$ = $\frac{256}{15}$ = 1  (remainder)
+$4^5$ = 4  
+  
+So the cycle is 4, 1 and it repeats every 2 terms.  
+  
+Now divide the exponent 5 by the cycle length 2:  
+5 ÷ 2 = 2 remainder 1  
+  
+So, $4^5$ will have the same remainder as $4^1$ when divided by 15.  
+And $4^1$ = 4  
+  
+Hence, the remainder when $4^5$ is divided by 15 is 4."
+,,,,What is the remainder when $45^{12}$ is divided by 6?,Medium,1,2,4,3,Option D,"Let's observe the pattern of powers of 45 divided by 6:  
+$45^1$ =$\frac{45}{6}$ = 3  (remainder)
+$45^2$ =$\frac{2025}{6}$ = 3  (remainder)
+$45^3$ =$\frac{45}{6}$ = 3  
+  
+So the remainder is always 3, since 45 mod 6 = 3 and 3^n mod 6 = 3 for any n ≥ 1.  
+  
+Hence, the remainder when $45^{12}$ is divided by 6 is 3."
+,,,,What is the remainder when $5^{126}$ is divided by 6?  ,Hard,2,1,3,4,Option B,"To find the remainder when $5^{126}$ is divided by 6.  
+Let's observe the pattern of powers of 5 divided by 6:  
+$5^1$ =$\frac{5}{6}$ = 5  (remainder)
+$5^2$ =$\frac{25}{6}$ = 1 (remainder)
+$5^3$ =$\frac{125}{6}$ = 5 (remainder)
+$5^4$ = 1  
+  
+So the cycle is 5, 1 and it repeats every 2 terms.  
+  
+Now divide the exponent 126 by the cycle length 2:  
+126 ÷ 2 = 63 remainder 0  
+  
+So, $5^{126}$ will have the same remainder as $5^2$ when divided by 6.  
+And $5^2$ = 1  
+  
+Hence, the remainder when $5^{126}$ is divided by 6 is 1."
+,,Do you remember why we study remainder cycles?,Helps in predicting remainders quickly without full division.,Let N = $632 \times 812$. What is the remainder when N is divided by 12?,Easy,5,6,4,7,Option C,"When 632 is divided by 12 it leaves the remainder 8  
+When 812 is divided by 12 it leaves the remainder 8  
+The remainder when $632 \times 812$ is divided by $12$ is same as the remainder when $8\times 8$ is divided by $12$.
+$8 \times 8 = 64$.
+When $64$ is divided by $12$, the remainder is $4$.
+Hence the answer is $4$."
+,,,,Find the remainder when $(50^6) + (64^{17})$ is divided by 7,Medium,1,2,3,4,Option B,"First calculate the individual remainders:
+
+Calculate 50 mod 7:  
+50 mod 7 = 1. 
+Therefore, the remainder cycle for $50^n$ mod 7 is $\{1\}$ 
+Then, the remainder when $50^6$ is divided by 7 is 1.  
+  
+Calculate 64 mod 7:  
+64 mod 7 = 1.  
+Therefore, the remainder cycle for $64^n$ mod 7 is $\{1\}$   
+Then, the remainder when $64^{17}$ is divided by 7 is 1.  
+By combining the results, we get 
+$(50^6+ (64^{17})$ mod 7 = 1 + 1 mod 7 = 2.  
+
+Hence the remainder when $(50^6+ (64^{17})$ is divided by 7 is 2."
+,,,,The smallest number when divided by 35 leaves the remainder 5. Find the remainder when the same number is divided by 28.,Hard,8,6,5,7,Option C,"The smallest number when divided by 35 leaves a remainder of 5.  
+Let the number be N.  
+So,  
+N = 35k + 5 for some integer k.
+
+To find the remainder when N is divided by 28.
+
+Now divide N by 28:
+
+N ÷ 28 = (35k + 5) ÷ 28
+
+Note that 35 ≡ 7 when divided by 28 (because 35 ÷ 28 leaves a remainder 7)
+So:  
+(35k + 5) ÷ 28 becomes  
+(7k + 5) ÷ 28
+
+We want to find the smallest value of N, so take k = 0 first:
+Then N = 35(0) + 5 = 5  
+5 ÷ 28 = remainder 5
+
+Try k = 1 → N = 35(1) + 5 = 40 → 40 ÷ 28 = remainder 12  
+k = 2 → N = 75 → remainder 19  
+k = 3 → 110 → remainder 26  
+
+They are only asked about the smallest such number.  
+That happens at k = 0 → N = 5
+
+So 5 ÷ 28 gives a remainder of 5."
+,,,,,,,,,,,
+Percentages,Percentages Basics,Did you remember the formula for percentage?,Percentage (%) = (Part / Whole) × 100,What is the 45% of 300?,Easy,130,135,140,145,Option B,"$45 \% = \dfrac{45}{30}$
+
+Then $45\% \text{of} 300 = \dfrac{45}{30} × 300 = 135$"
+,,,,Convert 0.375 into a fraction in simplest form.,Medium,3/8,5/8,3/5,7/8,Option A,"Multiply and divide the given decimal with 1000
+
+$0.375 = \dfrac{375}{1000}= \dfrac{3}{8}$"
+,,,,"If you take 40% of 30% of 100, what is the result?",Hard,10,12,15,18,Option B,"$30 \% \ \text{of} \ 100 = \dfrac{30}{100} × 100 = 30$
+
+Now, $40 \% \ \text{of} \ 30 = \dfrac{40}{100} × 30 = 12$ "
+,Percentages 1,Did you know the formula for calculating percentage change?,$\text{Percentage Change} = \dfrac{\text{New Value} − \text{Old Value}}{\text{Old Value}} × 100$,A quantity increases from ₹400 to ₹500. What is the percentage change?,Easy,20 %,22 %,25 %,30 %,Option C,"$\text{Percentage Change} = \dfrac{\text{New Value} − \text{Old Value}}{\text{Old Value}} × 100$
+
+$\text{Percentage Change} = \dfrac{500 − 400}{400} × 100 = 25\%$"
+,,,,"The population of a village drops from 6,000 to 4,800. What is the % decrease?",Medium,18 %,20 %,22 %,25 %,Option B,"$\text{Percentage Change} = \dfrac{\text{New Value} − \text{Old Value}}{\text{Old Value}} × 100$
+
+$\text{Percentage Change} = \dfrac{4800 − 6000}{6000} × 100 = -20\%$
+
+Hence, it is $20 \%$ decreased."
+,,,,"A salary increases from ₹25,000 to ₹40,000. What is the percentage increase?",Hard,55 %,58 %,60 %,65 %,Option C,"$\text{Percentage Change} = \dfrac{\text{New Value} − \text{Old Value}}{\text{Old Value}} × 100$
+
+$\text{Percentage Change} = \dfrac{40000-25000}{25000} × 100$
+
+$= \dfrac{15000}{25000} × 100 = \dfrac{15}{25}× 100 = 60 \%$"
+,Percentages 2,Do you know how to find the overall percentage change after successive % changes?,"If a value changes by $x\%$ and then by $y\%$ (increase or decrease), 
+the net $\%$ change is:
+
+$\text{Net \% change} = x + y + \dfrac{x \times y}{100}$
+
+If it’s a decrease, take the percentage as negative.
+Positive result → net increase
+Negative result → net decrease",A shopkeeper increases the price of an item by 10% and then increases another 20% on the new price. What is the net change in price?,Easy,30  %,32  %,33 %,34 %,Option B,"$\text{Net \% change} = x + y + \dfrac{x \times y}{100}$
+
+Here, $x\%=10$, $y\%=20$ then,
+
+Net change = $10 + 20 + \dfrac{10 \times 20}{100} = 32\%$"
+,,,,A values is reduced by 10% then again by 8%. then what is the Net % decrease?,Medium,18.8 %,17.2  %,16.6  %,15.4 %,Option B,"$\text{Net \% change} = x + y + \dfrac{x \times y}{100}$
+
+Here, $x\%=-10$, $y\%=-8$ since, the value is decreased then,
+
+Net change = $-10 - 8 + \dfrac{-10 \times -8}{100} = -18 + 0.8 = -17.2\%$"
+,,,,"The price of a gadget is decreased by 20%, and after some time, it is increased by 8%. What is the overall % change in price compared to the original?",Hard,12 % Decrease,13 % Increase,13.6 % Decrease,14.6 % Increase,Option C,"$\text{Net \% change} = x + y + \dfrac{x \times y}{100}$
+
+Here, $x\%=-20$, $y\%=8$ since, the value is decreased and then increased,
+
+Net change = $-20 + 8 + \dfrac{-20 \times 8}{100} = -12 - 1.6 = -13.6\%$
+
+Hence it is decreased by $13.6 \%$"
+,,,,,,,,,,,

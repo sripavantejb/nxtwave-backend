@@ -1,10 +1,11 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import { connectToDatabase } from './config/db.js';
 import topicRoutes from './routes/topicRoutes.js';
 import quizRoutes from './routes/quizRoutes.js';
 import flashcardRoutes from './routes/flashcardRoutes.js';
+import authRoutes from './routes/authRoutes.js';
+import spacedRoutes from './routes/spacedRoutes.js';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -43,30 +44,23 @@ app.get('/api/health', (_req, res) => {
 });
 
 // API routes (MVC)
+app.use('/api/auth', authRoutes);
 app.use('/api', topicRoutes);
 app.use('/api', quizRoutes);
 app.use('/api/flashcards', flashcardRoutes);
+app.use('/api', spacedRoutes);
 
 // Not found handler
 app.use((_req, res) => {
   res.status(404).json({ error: 'Not Found' });
 });
 
-async function start() {
-  // Start the HTTP server first
+function start() {
+  // Start the HTTP server
   app.listen(PORT, () => {
     console.log(`SmartQuiz backend listening on http://localhost:${PORT}`);
+    console.log('Using CSV file as data source: topics_until_percentages.csv');
   });
-
-  // Try to connect to database (non-blocking)
-  try {
-    await connectToDatabase();
-    console.log('Database connected successfully');
-  } catch (err) {
-    console.error('Warning: Failed to connect to database:', err.message);
-    console.error('Server is running but database operations will fail');
-    // Don't exit - allow server to run so we can debug
-  }
 }
 
 start();
