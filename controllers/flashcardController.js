@@ -444,7 +444,7 @@ export async function submitAnswer(req, res) {
       return res.status(404).json(result);
     }
     
-    // Get the actual question to determine its real difficulty
+    // Get the actual question to determine its real difficulty (for fallback)
     const question = getQuestionById(questionId);
     let actualDifficulty = 'medium'; // default (lowercase for storage)
     
@@ -452,8 +452,23 @@ export async function submitAnswer(req, res) {
       actualDifficulty = question.difficulty; // Already lowercase
     }
     
+    // Get the difficulty from the flashcard rating (stored when rating was submitted)
+    // This is the user's self-assessed difficulty, which should be used for spaced repetition
+    let ratingDifficulty = null;
+    if (flashcardQuestionId) {
+      const flashcardReview = getUserReviewData(userId)[flashcardQuestionId];
+      ratingDifficulty = flashcardReview?.difficulty || null;
+    }
+    
+    // Use rating difficulty if available, otherwise fall back to question's difficulty
+    // Normalize to lowercase for consistency
+    const difficultyForReview = ratingDifficulty 
+      ? String(ratingDifficulty).toLowerCase() 
+      : actualDifficulty;
+    
     // Calculate next review date using spaced repetition service
-    const nextReviewDate = calculateNextReviewDate(result.correct, actualDifficulty);
+    // This uses the flashcard rating difficulty (Easy/Medium/Hard) to determine review schedule
+    const nextReviewDate = calculateNextReviewDate(result.correct, difficultyForReview);
     
     // Get existing review data
     const existingReview = getUserReviewData(userId)[questionId];
@@ -464,8 +479,9 @@ export async function submitAnswer(req, res) {
       : 1;
     
     // Update user's reviewData (immediate persistence)
+    // Store the difficulty that was used for the review calculation
     updateUserReviewData(userId, questionId, {
-      difficulty: actualDifficulty,
+      difficulty: difficultyForReview,
       lastAnswerCorrect: result.correct,
       nextReviewDate: nextReviewDate.toISOString(),
       timesReviewed
@@ -473,12 +489,11 @@ export async function submitAnswer(req, res) {
     
     // If this is a follow-up question from a flashcard, mark the flashcard subtopic as completed
     if (flashcardSubTopic && flashcardSubTopic.trim() !== '') {
-      // Get the difficulty from the flashcard rating (stored when rating was submitted)
-      const flashcardReview = flashcardQuestionId ? getUserReviewData(userId)[flashcardQuestionId] : null;
-      const ratingDifficulty = flashcardReview?.difficulty || 'medium';
+      // Use the same rating difficulty for subtopic calculation
+      const subtopicRatingDifficulty = ratingDifficulty || 'medium';
       
       // Calculate next review date for subtopic based on follow-up answer correctness and rating difficulty
-      const subtopicNextReviewDate = calculateSubtopicNextReviewDate(result.correct, ratingDifficulty);
+      const subtopicNextReviewDate = calculateSubtopicNextReviewDate(result.correct, subtopicRatingDifficulty);
       
       // Mark subtopic as completed and set next review date
       markSubtopicCompleted(userId, flashcardSubTopic, subtopicNextReviewDate.toISOString());
