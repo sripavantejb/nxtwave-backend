@@ -56,17 +56,64 @@ export function saveUsers(usersData) {
  * @returns {Object|null} User object with userId included, or null if not found
  */
 export function findUserByEmail(email) {
-  const users = loadUsers();
-  const userId = Object.keys(users).find(
-    id => users[id].email.toLowerCase() === email.toLowerCase()
-  );
-  
-  if (!userId) return null;
-  
-  return {
-    userId,
-    ...users[userId]
-  };
+  try {
+    if (!email || typeof email !== 'string') {
+      console.error('findUserByEmail: Invalid email parameter:', email);
+      return null;
+    }
+    
+    const users = loadUsers();
+    
+    // Validate users object
+    if (!users || typeof users !== 'object') {
+      console.error('findUserByEmail: Invalid users data structure');
+      return null;
+    }
+    
+    const userId = Object.keys(users).find(
+      id => {
+        const user = users[id];
+        // Safely check if user exists and has email property
+        if (!user || typeof user !== 'object' || !user.email) {
+          return false;
+        }
+        // Safely compare emails (case-insensitive)
+        try {
+          return user.email.toLowerCase() === email.toLowerCase();
+        } catch (emailError) {
+          console.error('findUserByEmail: Error comparing emails:', {
+            userId: id,
+            userEmail: user.email,
+            searchEmail: email,
+            error: emailError instanceof Error ? emailError.message : String(emailError)
+          });
+          return false;
+        }
+      }
+    );
+    
+    if (!userId) return null;
+    
+    const user = users[userId];
+    if (!user || typeof user !== 'object') {
+      console.error('findUserByEmail: User data is invalid for userId:', userId);
+      return null;
+    }
+    
+    return {
+      userId,
+      ...user
+    };
+  } catch (error) {
+    console.error('findUserByEmail: Unexpected error:', {
+      email,
+      error: error instanceof Error ? error.message : String(error),
+      errorType: error instanceof Error ? error.constructor.name : typeof error,
+      stack: error instanceof Error ? error.stack : undefined
+    });
+    // Return null instead of throwing to prevent 500 errors
+    return null;
+  }
 }
 
 /**
