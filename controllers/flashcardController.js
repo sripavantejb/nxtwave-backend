@@ -171,6 +171,20 @@ export async function startSession(req, res) {
       return res.status(401).json({ error: 'Authentication required' });
     }
     
+    // Ensure user exists in the database (create if needed)
+    const users = loadUsers();
+    if (!users[userId]) {
+      // User doesn't exist - this shouldn't happen if auth is working correctly
+      // but we'll handle it gracefully by initializing the user
+      console.warn(`User ${userId} not found in database, initializing...`);
+      users[userId] = {
+        reviewData: {}
+      };
+      if (!saveUsers(users)) {
+        return res.status(500).json({ error: 'Failed to initialize user data' });
+      }
+    }
+    
     // Check if force parameter is provided (to force new session even if one exists)
     const forceNew = req.query.force === 'true' || req.query.force === '1';
     
@@ -189,7 +203,18 @@ export async function startSession(req, res) {
     // Use batch composition algorithm to create session with 6 flashcards
     // Priority 1: Incorrectly answered flashcards that are due
     // Priority 2: Random flashcards to fill remaining slots
-    const batch = composeBatch(userId, 6);
+    let batch;
+    try {
+      batch = composeBatch(userId, 6);
+    } catch (batchErr) {
+      console.error('Error in composeBatch:', batchErr);
+      // Fall back to random selection if batch composition fails
+      const allSubtopics = getAllUniqueSubtopics();
+      if (allSubtopics.length === 0) {
+        return res.status(404).json({ error: 'No subtopics available' });
+      }
+      batch = { subtopics: pickRandomSubtopics(6) };
+    }
     
     if (batch.subtopics.length === 0) {
       // If no subtopics from batch composition, fall back to random selection
@@ -206,7 +231,11 @@ export async function startSession(req, res) {
     const success = startNewSession(userId, batch.subtopics);
     
     if (!success) {
-      return res.status(500).json({ error: 'Failed to start session' });
+      console.error(`Failed to start session for user ${userId}`);
+      return res.status(500).json({ 
+        error: 'Failed to start session',
+        message: 'Unable to save session data. Please try again.'
+      });
     }
     
     return res.json({
@@ -215,7 +244,10 @@ export async function startSession(req, res) {
     });
   } catch (err) {
     console.error('Error starting session:', err);
-    return res.status(500).json({ error: 'Failed to start session' });
+    return res.status(500).json({ 
+      error: 'Failed to start session',
+      message: err instanceof Error ? err.message : 'Unknown error occurred'
+    });
   }
 }
 

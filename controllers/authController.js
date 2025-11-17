@@ -144,8 +144,12 @@ export function getProfile(req, res) {
     const user = findUserById(req.userId);
     
     if (!user) {
-      return res.status(404).json({ 
-        error: 'User not found' 
+      // User not found - this could happen if user was deleted or data is inconsistent
+      // Return 401 to indicate authentication issue (token is valid but user doesn't exist)
+      console.warn(`User ${req.userId} not found in database`);
+      return res.status(401).json({ 
+        error: 'User not found',
+        message: 'Your account may have been removed or there is a data inconsistency. Please log in again.'
       });
     }
     
@@ -158,7 +162,8 @@ export function getProfile(req, res) {
   } catch (error) {
     console.error('Get profile error:', error);
     res.status(500).json({ 
-      error: 'Failed to get profile' 
+      error: 'Failed to get profile',
+      message: error instanceof Error ? error.message : 'Unknown error occurred'
     });
   }
 }
