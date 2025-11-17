@@ -1,5 +1,5 @@
 import { loadQuestionsFromCSV } from './csvQuestionService.js';
-import { getEligibleQuestionIdsForUser, getUserReviewData, getShownFlashcards, loadUsers, saveUsers, getPreviousBatchFlashcards } from './userService.js';
+import { getEligibleQuestionIdsForUser, getUserReviewData, getShownFlashcards, loadUsers, saveUsers, getPreviousBatchFlashcards, getCurrentBatchFlashcards } from './userService.js';
 import { getAllDueQuestions } from './spacedRepService.js';
 
 /**
@@ -208,6 +208,14 @@ export function composeBatch(userId, batchSize = 6) {
   const previousBatchFlashcards = getPreviousBatchFlashcards(userId);
   const previousBatchSet = new Set(previousBatchFlashcards);
   
+  // Also get current batch flashcard IDs to exclude them (in case batch wasn't properly moved to previous)
+  // This prevents the same batch from being repeated if completeBatch wasn't called or failed
+  const currentBatchFlashcards = getCurrentBatchFlashcards(userId);
+  const currentBatchSet = new Set(currentBatchFlashcards || []);
+  
+  // Combine previous and current batches into exclusion set
+  const excludedBatchSet = new Set([...previousBatchFlashcards, ...(currentBatchFlashcards || [])]);
+  
   // Priority 1: Collect all past-due flashcards
   // Include both incorrectly answered and correctly answered flashcards where nextReviewDate has arrived
   const dueFlashcardIds = [];
@@ -221,10 +229,11 @@ export function composeBatch(userId, batchSize = 6) {
   
   // Find all past-due flashcards (both incorrect and correct)
   // Use the flashcard questions that are in the due questions list
+  // Past-due flashcards can repeat even if in previous batches or current batch (they're due, so must be reviewed)
   for (const question of allFlashcards) {
     // Check if this flashcard is due (in the due questions list)
     if (dueQuestionIdsSet.has(question.id)) {
-      // This flashcard is due - include it (past-due flashcards can repeat even if in previous batches)
+      // This flashcard is due - include it (past-due flashcards can repeat even if in previous/current batches)
       if (!selectedFlashcardIds.has(question.id)) {
         dueFlashcardIds.push(question.id);
         selectedFlashcardIds.add(question.id);
@@ -255,8 +264,8 @@ export function composeBatch(userId, batchSize = 6) {
         return false;
       }
       
-      // Skip if in previous batches (for new flashcards only, past-due can repeat)
-      if (previousBatchSet.has(question.id)) {
+      // Skip if in previous batches or current batch (for new flashcards only, past-due can repeat)
+      if (excludedBatchSet.has(question.id)) {
         return false;
       }
       
