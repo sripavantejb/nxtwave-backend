@@ -187,8 +187,8 @@ export function mapRatingToDifficulty(rating) {
 
 /**
  * Batch Composition Algorithm
- * Priority 1: Get due flashcards with lastAnswerCorrect: false (incorrectly answered)
- * Priority 2: Fill remaining slots (up to 6 total) with random flashcards
+ * Priority 1: Include all past-due flashcards (incorrect + correct with arrived nextReview)
+ * Priority 2: Fill remaining slots with new flashcards never attempted before
  * @param {string} userId - User ID
  * @param {number} batchSize - Total batch size (default: 6)
  * @returns {Object} Object with flashcardIds array and subtopics array
@@ -198,66 +198,91 @@ export function composeBatch(userId, batchSize = 6) {
   const reviewData = getUserReviewData(userId);
   const now = new Date();
   
-  // Priority 1: Get incorrectly answered flashcards that are due
-  const incorrectDueFlashcards = [];
-  const incorrectDueSubtopics = new Set();
-  
   // Get all questions with flashcards
   const allFlashcards = data.questions.filter(
     q => q.flashcard && q.flashcard.trim() !== ''
   );
   
-  // Find incorrectly answered flashcards that are due
+  // Priority 1: Collect all past-due flashcards
+  // Include both incorrectly answered and correctly answered flashcards where nextReviewDate has arrived
+  const dueFlashcardIds = [];
+  const dueSubtopics = new Set();
+  const selectedFlashcardIds = new Set(); // Track selected IDs to ensure uniqueness
+  
+  // Special keys to skip when iterating reviewData (not applicable when checking by question.id)
+  // But we'll use getAllDueQuestions which already handles this correctly
+  const allDueQuestionIds = getAllDueQuestions(userId);
+  const dueQuestionIdsSet = new Set(allDueQuestionIds);
+  
+  // Find all past-due flashcards (both incorrect and correct)
+  // Use the flashcard questions that are in the due questions list
   for (const question of allFlashcards) {
-    const review = reviewData[question.id];
-    if (review && 
-        review.lastAnswerCorrect === false && 
-        review.nextReviewDate) {
-      const nextReview = new Date(review.nextReviewDate);
-      if (now >= nextReview) {
-        incorrectDueFlashcards.push(question.id);
+    // Check if this flashcard is due (in the due questions list)
+    if (dueQuestionIdsSet.has(question.id)) {
+      // This flashcard is due - include it
+      if (!selectedFlashcardIds.has(question.id)) {
+        dueFlashcardIds.push(question.id);
+        selectedFlashcardIds.add(question.id);
         if (question.subTopic && question.subTopic.trim() !== '') {
-          incorrectDueSubtopics.add(question.subTopic.trim());
+          dueSubtopics.add(question.subTopic.trim());
         }
       }
     }
   }
   
-  // Priority 2: Fill remaining slots with random flashcards
-  const remainingSlots = Math.max(0, batchSize - incorrectDueFlashcards.length);
-  const randomFlashcardIds = [];
-  const randomSubtopics = new Set();
+  // Priority 2: Fill remaining slots with new flashcards (never attempted)
+  const remainingSlots = Math.max(0, batchSize - dueFlashcardIds.length);
+  const newFlashcardIds = [];
+  const newSubtopics = new Set();
   
   if (remainingSlots > 0) {
-    // Get all available subtopics
-    const allSubtopics = getAllUniqueSubtopics();
-    
-    // Exclude subtopics already included from incorrect flashcards
-    const availableSubtopics = allSubtopics.filter(
-      st => !incorrectDueSubtopics.has(st)
-    );
-    
-    // Pick random subtopics (up to remaining slots)
-    const selectedRandomSubtopics = pickRandomSubtopics(Math.min(remainingSlots, availableSubtopics.length));
-    
-    // Get flashcards from selected random subtopics
-    for (const subtopic of selectedRandomSubtopics) {
-      const flashcardsInSubtopic = allFlashcards.filter(
-        q => q.subTopic && q.subTopic.trim() === subtopic
-      );
+    // Filter for new flashcards (never attempted and not scheduled for future)
+    const newFlashcards = allFlashcards.filter(question => {
+      // Skip if already selected
+      if (selectedFlashcardIds.has(question.id)) {
+        return false;
+      }
       
-      if (flashcardsInSubtopic.length > 0) {
-        // Pick a random flashcard from this subtopic
-        const randomIndex = Math.floor(Math.random() * flashcardsInSubtopic.length);
-        randomFlashcardIds.push(flashcardsInSubtopic[randomIndex].id);
-        randomSubtopics.add(subtopic);
+      const review = reviewData[question.id];
+      
+      // Never attempted: no review data exists
+      if (!review) {
+        return true;
+      }
+      
+      // If review exists, check if it's scheduled for future
+      // Exclude if scheduled for future (nextReviewDate > now)
+      if (review.nextReviewDate) {
+        const nextReview = new Date(review.nextReviewDate);
+        if (nextReview > now) {
+          // Scheduled for future - exclude
+          return false;
+        }
+      }
+      
+      // If review exists but no nextReviewDate or it's due, consider it eligible
+      // (This handles edge cases where review exists but might be eligible)
+      return true;
+    });
+    
+    // Shuffle and select up to remainingSlots new flashcards
+    const shuffled = [...newFlashcards].sort(() => Math.random() - 0.5);
+    const selectedNew = shuffled.slice(0, remainingSlots);
+    
+    for (const question of selectedNew) {
+      if (!selectedFlashcardIds.has(question.id)) {
+        newFlashcardIds.push(question.id);
+        selectedFlashcardIds.add(question.id);
+        if (question.subTopic && question.subTopic.trim() !== '') {
+          newSubtopics.add(question.subTopic.trim());
+        }
       }
     }
   }
   
-  // Combine: incorrect flashcards first, then random ones
-  const allFlashcardIds = [...incorrectDueFlashcards, ...randomFlashcardIds];
-  const allSubtopics = Array.from(new Set([...incorrectDueSubtopics, ...randomSubtopics]));
+  // Combine: due flashcards first, then new ones
+  const allFlashcardIds = [...dueFlashcardIds, ...newFlashcardIds];
+  const allSubtopics = Array.from(new Set([...dueSubtopics, ...newSubtopics]));
   
   return {
     flashcardIds: allFlashcardIds.slice(0, batchSize), // Ensure we don't exceed batch size
