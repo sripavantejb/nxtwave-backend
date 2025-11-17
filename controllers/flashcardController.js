@@ -14,10 +14,11 @@ import {
   loadQuestions,
   pickRandomSubtopics,
   getRandomFlashcard as getRandomFlashcardFromService,
-  getAllUniqueSubtopics
+  getAllUniqueSubtopics,
+  composeBatch
 } from '../services/flashcardJsonService.js';
 import { updateReviewSchedule } from '../utils/reviewSchedule.js';
-import { updateUserReviewData, getUserReviewData, startNewSession, getSessionSubtopics, getCompletedSubtopics, isSubtopicDue, markSubtopicCompleted, updateSubtopicReviewDate, markFlashcardAsShown, getShownFlashcards, loadUsers, saveUsers } from '../services/userService.js';
+import { updateUserReviewData, getUserReviewData, startNewSession, getSessionSubtopics, getCompletedSubtopics, isSubtopicDue, markSubtopicCompleted, updateSubtopicReviewDate, markFlashcardAsShown, getShownFlashcards, loadUsers, saveUsers, isDayShiftCompleted, getIncorrectlyAnsweredDueFlashcards } from '../services/userService.js';
 import { calculateNextReviewDate, getAllDueQuestions, getDueFlashcardSubtopics, calculateSubtopicNextReviewDate } from '../services/spacedRepService.js';
 
 let cachedTopicMap = null;
@@ -177,62 +178,39 @@ export async function startSession(req, res) {
     const existingSession = getSessionSubtopics(userId);
     
     // If session exists and has subtopics, and not forcing new session
-    // Check if it's an old session with exactly 6 subtopics (old limit) and upgrade it
+    // Return existing session (limit to 6 flashcards is enforced in frontend)
     if (!forceNew && existingSession && existingSession.length > 0) {
-      // If session has exactly 6 subtopics, it's from the old format - always upgrade it
-      if (existingSession.length === 6) {
-        // Force recreation of session with all subtopics
-        // Clear the old session by calling startNewSession with empty array first
-        startNewSession(userId, []);
-        // (fall through to create new session below)
-      } else {
-        // Session has more than 6 subtopics, it's already upgraded - return it
-        return res.json({
-          sessionSubtopics: existingSession,
-          isNewSession: false
-        });
-      }
-    }
-    
-    // Get due questions first (incorrectly answered questions from previous session)
-    const dueQuestionIds = getAllDueQuestions(userId);
-    const data = loadQuestions();
-    
-    // Extract unique subtopics from due questions
-    const dueSubtopicsSet = new Set();
-    if (dueQuestionIds.length > 0) {
-      dueQuestionIds.forEach(questionId => {
-        const question = data.questions.find(q => q.id === questionId && q.flashcard && q.flashcard.trim() !== '');
-        if (question && question.subTopic && question.subTopic.trim() !== '') {
-          dueSubtopicsSet.add(question.subTopic.trim());
-        }
+      return res.json({
+        sessionSubtopics: existingSession,
+        isNewSession: false
       });
     }
     
-    // Get all available subtopics from entire CSV
-    const allSubtopics = getAllUniqueSubtopics();
+    // Use batch composition algorithm to create session with 6 flashcards
+    // Priority 1: Incorrectly answered flashcards that are due
+    // Priority 2: Random flashcards to fill remaining slots
+    const batch = composeBatch(userId, 6);
     
-    if (allSubtopics.length === 0) {
-      return res.status(404).json({ error: 'No subtopics available' });
+    if (batch.subtopics.length === 0) {
+      // If no subtopics from batch composition, fall back to random selection
+      const allSubtopics = getAllUniqueSubtopics();
+      if (allSubtopics.length === 0) {
+        return res.status(404).json({ error: 'No subtopics available' });
+      }
+      
+      // Pick 6 random subtopics
+      batch.subtopics = pickRandomSubtopics(6);
     }
     
-    // Create session with due subtopics + all remaining subtopics (no limit)
-    const dueSubtopics = Array.from(dueSubtopicsSet);
-    const remainingSubtopics = allSubtopics.filter(st => !dueSubtopics.includes(st));
-    
-    // Combine: due subtopics first, then all remaining ones
-    // Include ALL available subtopics in the session
-    let sessionSubtopics = [...dueSubtopics, ...remainingSubtopics];
-    
     // Store session in user's reviewData (this also resets shownFlashcards)
-    const success = startNewSession(userId, sessionSubtopics);
+    const success = startNewSession(userId, batch.subtopics);
     
     if (!success) {
       return res.status(500).json({ error: 'Failed to start session' });
     }
     
     return res.json({
-      sessionSubtopics: sessionSubtopics,
+      sessionSubtopics: batch.subtopics,
       isNewSession: true
     });
   } catch (err) {
@@ -910,6 +888,91 @@ export async function getConcepts(req, res) {
   } catch (err) {
     console.error('Error fetching concepts from CSV:', err);
     return res.status(500).json({ error: `Failed to fetch concepts: ${err.message}` });
+  }
+}
+
+/**
+ * GET /flashcards/check-new-batch
+ * Checks if a new batch is available after day shift completion
+ * Requires JWT authentication
+ * Returns: { available: boolean, message?: string }
+ */
+export async function checkNewBatch(req, res) {
+  try {
+    const userId = req.userId; // Set by authenticateUser middleware (required)
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    const dayShiftCompleted = isDayShiftCompleted(userId);
+    
+    return res.json({
+      available: dayShiftCompleted,
+      message: dayShiftCompleted 
+        ? 'New batch available! Start a new session to review incorrectly answered flashcards.' 
+        : 'No new batch available yet. Complete your current session first.'
+    });
+  } catch (err) {
+    console.error('Error checking new batch:', err);
+    return res.status(500).json({ error: 'Failed to check new batch availability' });
+  }
+}
+
+/**
+ * POST /flashcards/create-new-batch
+ * Creates a new batch after day shift completion
+ * Uses batch composition algorithm: incorrect flashcards first, then random (total 6)
+ * Requires JWT authentication
+ * Returns: { sessionSubtopics: string[], isNewSession: boolean }
+ */
+export async function createNewBatch(req, res) {
+  try {
+    const userId = req.userId; // Set by authenticateUser middleware (required)
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    // Check if day shift has completed
+    const dayShiftCompleted = isDayShiftCompleted(userId);
+    
+    if (!dayShiftCompleted) {
+      return res.status(400).json({ 
+        error: 'Day shift has not completed yet. No new batch available.',
+        available: false
+      });
+    }
+    
+    // Use batch composition algorithm to create session with 6 flashcards
+    const batch = composeBatch(userId, 6);
+    
+    if (batch.subtopics.length === 0) {
+      // If no subtopics from batch composition, fall back to random selection
+      const allSubtopics = getAllUniqueSubtopics();
+      if (allSubtopics.length === 0) {
+        return res.status(404).json({ error: 'No subtopics available' });
+      }
+      
+      // Pick 6 random subtopics
+      batch.subtopics = pickRandomSubtopics(6);
+    }
+    
+    // Store session in user's reviewData (this also resets shownFlashcards)
+    const success = startNewSession(userId, batch.subtopics);
+    
+    if (!success) {
+      return res.status(500).json({ error: 'Failed to create new batch' });
+    }
+    
+    return res.json({
+      sessionSubtopics: batch.subtopics,
+      isNewSession: true,
+      message: 'New batch created successfully!'
+    });
+  } catch (err) {
+    console.error('Error creating new batch:', err);
+    return res.status(500).json({ error: 'Failed to create new batch' });
   }
 }
 

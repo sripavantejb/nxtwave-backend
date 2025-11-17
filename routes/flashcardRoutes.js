@@ -11,7 +11,9 @@ import {
   getDueReviews,
   getConcepts,
   startSession,
-  resetShownFlashcards
+  resetShownFlashcards,
+  checkNewBatch,
+  createNewBatch
 } from '../controllers/flashcardController.js';
 import { optionalAuth, authenticateUser } from '../middleware/auth.js';
 
@@ -33,6 +35,8 @@ router.post('/question/submit', authenticateUser, submitAnswer);
 router.get('/next-question', authenticateUser, getNextQuestion);
 router.get('/due-reviews', authenticateUser, getDueReviews);
 router.post('/reset-shown', authenticateUser, resetShownFlashcards);
+router.get('/check-new-batch', authenticateUser, checkNewBatch);
+router.post('/create-new-batch', authenticateUser, createNewBatch);
 
 // Question routes (optional auth for flexibility)
 router.get('/question/followup/:topic/:difficulty', optionalAuth, getFollowUpQuestionJson);

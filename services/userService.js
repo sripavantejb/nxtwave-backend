@@ -438,3 +438,70 @@ export function updateSubtopicReviewDate(userId, subtopicName, nextReviewDate) {
     return false;
   }
 }
+
+/**
+ * Check if day shift has completed (nextReviewDate has passed)
+ * Day shift = 5 minutes (for testing) or 1 day (for production)
+ * @param {string} userId - User ID
+ * @returns {boolean} True if day shift has completed and new batch is available
+ */
+export function isDayShiftCompleted(userId) {
+  const reviewData = getUserReviewData(userId);
+  const now = new Date();
+  
+  // Check if there are any incorrectly answered flashcards that are due
+  // This indicates that a day shift has completed
+  const specialKeys = ['flashcardSubtopic', 'sessionSubtopics', 'completedSubtopics', 'shownFlashcards'];
+  
+  for (const [questionId, review] of Object.entries(reviewData)) {
+    // Skip special keys
+    if (specialKeys.includes(questionId)) {
+      continue;
+    }
+    
+    // Check if this is an incorrectly answered flashcard that is due
+    if (review && 
+        review.lastAnswerCorrect === false && 
+        review.nextReviewDate) {
+      const nextReview = new Date(review.nextReviewDate);
+      if (now >= nextReview) {
+        // Found at least one incorrectly answered flashcard that is due
+        return true;
+      }
+    }
+  }
+  
+  return false;
+}
+
+/**
+ * Get incorrectly answered flashcards that are due for review
+ * @param {string} userId - User ID
+ * @returns {Array<string>} Array of question IDs that are incorrectly answered and due
+ */
+export function getIncorrectlyAnsweredDueFlashcards(userId) {
+  const reviewData = getUserReviewData(userId);
+  const now = new Date();
+  const incorrectDueFlashcards = [];
+  
+  const specialKeys = ['flashcardSubtopic', 'sessionSubtopics', 'completedSubtopics', 'shownFlashcards'];
+  
+  for (const [questionId, review] of Object.entries(reviewData)) {
+    // Skip special keys
+    if (specialKeys.includes(questionId)) {
+      continue;
+    }
+    
+    // Check if this is an incorrectly answered flashcard that is due
+    if (review && 
+        review.lastAnswerCorrect === false && 
+        review.nextReviewDate) {
+      const nextReview = new Date(review.nextReviewDate);
+      if (now >= nextReview) {
+        incorrectDueFlashcards.push(questionId);
+      }
+    }
+  }
+  
+  return incorrectDueFlashcards;
+}

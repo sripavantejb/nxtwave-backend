@@ -186,6 +186,86 @@ export function mapRatingToDifficulty(rating) {
 }
 
 /**
+ * Batch Composition Algorithm
+ * Priority 1: Get due flashcards with lastAnswerCorrect: false (incorrectly answered)
+ * Priority 2: Fill remaining slots (up to 6 total) with random flashcards
+ * @param {string} userId - User ID
+ * @param {number} batchSize - Total batch size (default: 6)
+ * @returns {Object} Object with flashcardIds array and subtopics array
+ */
+export function composeBatch(userId, batchSize = 6) {
+  const data = loadQuestions();
+  const reviewData = getUserReviewData(userId);
+  const now = new Date();
+  
+  // Priority 1: Get incorrectly answered flashcards that are due
+  const incorrectDueFlashcards = [];
+  const incorrectDueSubtopics = new Set();
+  
+  // Get all questions with flashcards
+  const allFlashcards = data.questions.filter(
+    q => q.flashcard && q.flashcard.trim() !== ''
+  );
+  
+  // Find incorrectly answered flashcards that are due
+  for (const question of allFlashcards) {
+    const review = reviewData[question.id];
+    if (review && 
+        review.lastAnswerCorrect === false && 
+        review.nextReviewDate) {
+      const nextReview = new Date(review.nextReviewDate);
+      if (now >= nextReview) {
+        incorrectDueFlashcards.push(question.id);
+        if (question.subTopic && question.subTopic.trim() !== '') {
+          incorrectDueSubtopics.add(question.subTopic.trim());
+        }
+      }
+    }
+  }
+  
+  // Priority 2: Fill remaining slots with random flashcards
+  const remainingSlots = Math.max(0, batchSize - incorrectDueFlashcards.length);
+  const randomFlashcardIds = [];
+  const randomSubtopics = new Set();
+  
+  if (remainingSlots > 0) {
+    // Get all available subtopics
+    const allSubtopics = getAllUniqueSubtopics();
+    
+    // Exclude subtopics already included from incorrect flashcards
+    const availableSubtopics = allSubtopics.filter(
+      st => !incorrectDueSubtopics.has(st)
+    );
+    
+    // Pick random subtopics (up to remaining slots)
+    const selectedRandomSubtopics = pickRandomSubtopics(Math.min(remainingSlots, availableSubtopics.length));
+    
+    // Get flashcards from selected random subtopics
+    for (const subtopic of selectedRandomSubtopics) {
+      const flashcardsInSubtopic = allFlashcards.filter(
+        q => q.subTopic && q.subTopic.trim() === subtopic
+      );
+      
+      if (flashcardsInSubtopic.length > 0) {
+        // Pick a random flashcard from this subtopic
+        const randomIndex = Math.floor(Math.random() * flashcardsInSubtopic.length);
+        randomFlashcardIds.push(flashcardsInSubtopic[randomIndex].id);
+        randomSubtopics.add(subtopic);
+      }
+    }
+  }
+  
+  // Combine: incorrect flashcards first, then random ones
+  const allFlashcardIds = [...incorrectDueFlashcards, ...randomFlashcardIds];
+  const allSubtopics = Array.from(new Set([...incorrectDueSubtopics, ...randomSubtopics]));
+  
+  return {
+    flashcardIds: allFlashcardIds.slice(0, batchSize), // Ensure we don't exceed batch size
+    subtopics: allSubtopics.slice(0, batchSize) // Limit subtopics to batch size
+  };
+}
+
+/**
  * Get a follow-up question based on topic, difficulty, and subtopic
  * Respects per-user spaced repetition scheduling
  * @param {string} topicId - The topic ID
@@ -199,13 +279,14 @@ export function getFollowUpQuestion(topicId, difficulty, userId = null, subTopic
   const data = loadQuestions();
   
   // Convert difficulty to lowercase to match data format
-  const difficultyLower = difficulty.toLowerCase();
+  // Handle both "Easy"/"Medium"/"Hard" and "easy"/"medium"/"hard"
+  const difficultyLower = String(difficulty || '').toLowerCase().trim();
   
   // Filter questions by topic and difficulty
   // Only include questions that have actual question text (not just flashcards)
   let candidateQuestions = data.questions.filter(
     q => q.topicId === topicId && 
-         q.difficulty === difficultyLower &&
+         String(q.difficulty || '').toLowerCase().trim() === difficultyLower &&
          q.question && 
          q.question.trim() !== '' &&
          q.options && 
@@ -218,12 +299,16 @@ export function getFollowUpQuestion(topicId, difficulty, userId = null, subTopic
     const flashcardQuestion = data.questions.find(q => q.id === flashcardQuestionId);
     
     if (flashcardQuestion && flashcardQuestion.flashcard) {
-      const flashcardText = flashcardQuestion.flashcard.trim();
-      // Filter questions to only those that have the same flashcard text
+      // Normalize flashcard text: trim and normalize whitespace (replace multiple spaces with single space)
+      const flashcardText = flashcardQuestion.flashcard.trim().replace(/\s+/g, ' ');
+      // Filter questions to only those that have the same flashcard text (normalized)
       // This matches questions to the specific flashcard concept
-      candidateQuestions = candidateQuestions.filter(q => 
-        q.flashcard && q.flashcard.trim() === flashcardText
-      );
+      candidateQuestions = candidateQuestions.filter(q => {
+        if (!q.flashcard) return false;
+        // Normalize both texts for comparison
+        const qFlashcardText = q.flashcard.trim().replace(/\s+/g, ' ');
+        return qFlashcardText === flashcardText;
+      });
     } else {
       // If flashcard question not found or has no flashcard text, return null
       console.log(`Flashcard question with ID ${flashcardQuestionId} not found or has no flashcard text. Returning null.`);
@@ -233,10 +318,10 @@ export function getFollowUpQuestion(topicId, difficulty, userId = null, subTopic
   
   // If subtopic is provided, filter by subtopic (case-insensitive, trimmed) - MANDATORY, no fallback
   if (subTopic && subTopic.trim() !== '') {
-    const subTopicNormalized = subTopic.trim().toLowerCase();
+    const subTopicNormalized = subTopic.trim().toLowerCase().replace(/\s+/g, ' ');
     candidateQuestions = candidateQuestions.filter(q => {
-      const qSubTopic = (q.subTopic || '').trim().toLowerCase();
-      // Case-insensitive matching - strict filtering, no fallback
+      const qSubTopic = (q.subTopic || '').trim().toLowerCase().replace(/\s+/g, ' ');
+      // Case-insensitive matching with normalized whitespace - strict filtering, no fallback
       return qSubTopic === subTopicNormalized;
     });
   }
