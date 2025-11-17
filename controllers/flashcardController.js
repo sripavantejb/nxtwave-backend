@@ -934,17 +934,9 @@ export async function createNewBatch(req, res) {
       return res.status(401).json({ error: 'Authentication required' });
     }
     
-    // Check if day shift has completed
-    const dayShiftCompleted = isDayShiftCompleted(userId);
-    
-    if (!dayShiftCompleted) {
-      return res.status(400).json({ 
-        error: 'Day shift has not completed yet. No new batch available.',
-        available: false
-      });
-    }
-    
     // Use batch composition algorithm to create session with 6 flashcards
+    // This will prioritize incorrectly answered flashcards if day shift has completed,
+    // otherwise it will use random flashcards
     const batch = composeBatch(userId, 6);
     
     if (batch.subtopics.length === 0) {
