@@ -587,7 +587,7 @@ export function getIncorrectlyAnsweredDueFlashcards(userId) {
   const now = new Date();
   const incorrectDueFlashcards = [];
   
-  const specialKeys = ['flashcardSubtopic', 'sessionSubtopics', 'completedSubtopics', 'shownFlashcards'];
+  const specialKeys = ['flashcardSubtopic', 'sessionSubtopics', 'completedSubtopics', 'shownFlashcards', 'currentBatchFlashcards', 'previousBatchFlashcards', 'currentBatchIndex', 'batchCompletionTime'];
   
   for (const [questionId, review] of Object.entries(reviewData)) {
     // Skip special keys
@@ -607,4 +607,167 @@ export function getIncorrectlyAnsweredDueFlashcards(userId) {
   }
   
   return incorrectDueFlashcards;
+}
+
+/**
+ * Get current batch flashcard IDs for a user
+ * @param {string} userId - User ID
+ * @returns {Array<string>} Array of flashcard IDs in current batch
+ */
+export function getCurrentBatchFlashcards(userId) {
+  const reviewData = getUserReviewData(userId);
+  return reviewData.currentBatchFlashcards || [];
+}
+
+/**
+ * Get previous batch flashcard IDs for a user
+ * @param {string} userId - User ID
+ * @returns {Array<string>} Array of flashcard IDs from all previous batches
+ */
+export function getPreviousBatchFlashcards(userId) {
+  const reviewData = getUserReviewData(userId);
+  return reviewData.previousBatchFlashcards || [];
+}
+
+/**
+ * Set current batch flashcard IDs for a user
+ * @param {string} userId - User ID
+ * @param {Array<string>} flashcardIds - Array of flashcard IDs
+ * @returns {boolean} Success status
+ */
+export function setCurrentBatchFlashcards(userId, flashcardIds) {
+  try {
+    const users = loadUsers();
+    
+    if (!users[userId]) {
+      console.error(`User ${userId} not found`);
+      return false;
+    }
+    
+    // Initialize reviewData if it doesn't exist
+    if (!users[userId].reviewData) {
+      users[userId].reviewData = {};
+    }
+    
+    // Store current batch flashcard IDs
+    users[userId].reviewData.currentBatchFlashcards = flashcardIds || [];
+    
+    // Reset current batch index when setting new batch
+    users[userId].reviewData.currentBatchIndex = 0;
+    
+    return saveUsers(users);
+  } catch (error) {
+    console.error('Error setting current batch flashcards:', error);
+    return false;
+  }
+}
+
+/**
+ * Add flashcard IDs to previous batches array
+ * @param {string} userId - User ID
+ * @param {Array<string>} flashcardIds - Array of flashcard IDs to add
+ * @returns {boolean} Success status
+ */
+export function addToPreviousBatches(userId, flashcardIds) {
+  try {
+    const users = loadUsers();
+    
+    if (!users[userId]) {
+      console.error(`User ${userId} not found`);
+      return false;
+    }
+    
+    // Initialize reviewData if it doesn't exist
+    if (!users[userId].reviewData) {
+      users[userId].reviewData = {};
+    }
+    
+    // Initialize previousBatchFlashcards if it doesn't exist
+    if (!users[userId].reviewData.previousBatchFlashcards) {
+      users[userId].reviewData.previousBatchFlashcards = [];
+    }
+    
+    // Append new IDs to previous batches (avoid duplicates)
+    const existingSet = new Set(users[userId].reviewData.previousBatchFlashcards);
+    for (const id of flashcardIds) {
+      if (!existingSet.has(id)) {
+        users[userId].reviewData.previousBatchFlashcards.push(id);
+      }
+    }
+    
+    return saveUsers(users);
+  } catch (error) {
+    console.error('Error adding to previous batches:', error);
+    return false;
+  }
+}
+
+/**
+ * Clear current batch for a user
+ * @param {string} userId - User ID
+ * @returns {boolean} Success status
+ */
+export function clearCurrentBatch(userId) {
+  try {
+    const users = loadUsers();
+    
+    if (!users[userId]) {
+      console.error(`User ${userId} not found`);
+      return false;
+    }
+    
+    // Initialize reviewData if it doesn't exist
+    if (!users[userId].reviewData) {
+      users[userId].reviewData = {};
+    }
+    
+    // Clear current batch
+    users[userId].reviewData.currentBatchFlashcards = [];
+    users[userId].reviewData.currentBatchIndex = 0;
+    
+    return saveUsers(users);
+  } catch (error) {
+    console.error('Error clearing current batch:', error);
+    return false;
+  }
+}
+
+/**
+ * Get current batch index for a user
+ * @param {string} userId - User ID
+ * @returns {number} Current batch index (0-5)
+ */
+export function getCurrentBatchIndex(userId) {
+  const reviewData = getUserReviewData(userId);
+  return reviewData.currentBatchIndex || 0;
+}
+
+/**
+ * Increment current batch index for a user
+ * @param {string} userId - User ID
+ * @returns {boolean} Success status
+ */
+export function incrementCurrentBatchIndex(userId) {
+  try {
+    const users = loadUsers();
+    
+    if (!users[userId]) {
+      console.error(`User ${userId} not found`);
+      return false;
+    }
+    
+    // Initialize reviewData if it doesn't exist
+    if (!users[userId].reviewData) {
+      users[userId].reviewData = {};
+    }
+    
+    // Increment index
+    const currentIndex = users[userId].reviewData.currentBatchIndex || 0;
+    users[userId].reviewData.currentBatchIndex = currentIndex + 1;
+    
+    return saveUsers(users);
+  } catch (error) {
+    console.error('Error incrementing batch index:', error);
+    return false;
+  }
 }

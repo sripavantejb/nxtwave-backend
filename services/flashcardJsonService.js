@@ -1,5 +1,5 @@
 import { loadQuestionsFromCSV } from './csvQuestionService.js';
-import { getEligibleQuestionIdsForUser, getUserReviewData, getShownFlashcards, loadUsers, saveUsers } from './userService.js';
+import { getEligibleQuestionIdsForUser, getUserReviewData, getShownFlashcards, loadUsers, saveUsers, getPreviousBatchFlashcards } from './userService.js';
 import { getAllDueQuestions } from './spacedRepService.js';
 
 /**
@@ -189,6 +189,7 @@ export function mapRatingToDifficulty(rating) {
  * Batch Composition Algorithm
  * Priority 1: Include all past-due flashcards (incorrect + correct with arrived nextReview)
  * Priority 2: Fill remaining slots with new flashcards never attempted before
+ * Excludes flashcards from previous batches
  * @param {string} userId - User ID
  * @param {number} batchSize - Total batch size (default: 6)
  * @returns {Object} Object with flashcardIds array and subtopics array
@@ -202,6 +203,10 @@ export function composeBatch(userId, batchSize = 6) {
   const allFlashcards = data.questions.filter(
     q => q.flashcard && q.flashcard.trim() !== ''
   );
+  
+  // Get previous batch flashcard IDs to exclude them
+  const previousBatchFlashcards = getPreviousBatchFlashcards(userId);
+  const previousBatchSet = new Set(previousBatchFlashcards);
   
   // Priority 1: Collect all past-due flashcards
   // Include both incorrectly answered and correctly answered flashcards where nextReviewDate has arrived
@@ -219,7 +224,7 @@ export function composeBatch(userId, batchSize = 6) {
   for (const question of allFlashcards) {
     // Check if this flashcard is due (in the due questions list)
     if (dueQuestionIdsSet.has(question.id)) {
-      // This flashcard is due - include it
+      // This flashcard is due - include it (past-due flashcards can repeat even if in previous batches)
       if (!selectedFlashcardIds.has(question.id)) {
         dueFlashcardIds.push(question.id);
         selectedFlashcardIds.add(question.id);
@@ -230,16 +235,24 @@ export function composeBatch(userId, batchSize = 6) {
     }
   }
   
+  // Limit past-due flashcards to batch size (take first batchSize if more than batchSize)
+  const limitedDueFlashcardIds = dueFlashcardIds.slice(0, batchSize);
+  const remainingSlots = Math.max(0, batchSize - limitedDueFlashcardIds.length);
+  
   // Priority 2: Fill remaining slots with new flashcards (never attempted)
-  const remainingSlots = Math.max(0, batchSize - dueFlashcardIds.length);
   const newFlashcardIds = [];
   const newSubtopics = new Set();
   
   if (remainingSlots > 0) {
-    // Filter for new flashcards (never attempted and not scheduled for future)
+    // Filter for new flashcards (never attempted, not scheduled for future, not in previous batches)
     const newFlashcards = allFlashcards.filter(question => {
-      // Skip if already selected
+      // Skip if already selected in this batch
       if (selectedFlashcardIds.has(question.id)) {
+        return false;
+      }
+      
+      // Skip if in previous batches (for new flashcards only, past-due can repeat)
+      if (previousBatchSet.has(question.id)) {
         return false;
       }
       
@@ -281,11 +294,14 @@ export function composeBatch(userId, batchSize = 6) {
   }
   
   // Combine: due flashcards first, then new ones
-  const allFlashcardIds = [...dueFlashcardIds, ...newFlashcardIds];
+  const allFlashcardIds = [...limitedDueFlashcardIds, ...newFlashcardIds];
   const allSubtopics = Array.from(new Set([...dueSubtopics, ...newSubtopics]));
   
+  // Ensure exactly batchSize flashcard IDs
+  const finalFlashcardIds = allFlashcardIds.slice(0, batchSize);
+  
   return {
-    flashcardIds: allFlashcardIds.slice(0, batchSize), // Ensure we don't exceed batch size
+    flashcardIds: finalFlashcardIds,
     subtopics: allSubtopics.slice(0, batchSize) // Limit subtopics to batch size
   };
 }

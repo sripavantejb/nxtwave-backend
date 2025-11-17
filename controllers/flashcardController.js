@@ -18,7 +18,7 @@ import {
   composeBatch
 } from '../services/flashcardJsonService.js';
 import { updateReviewSchedule } from '../utils/reviewSchedule.js';
-import { updateUserReviewData, getUserReviewData, startNewSession, getSessionSubtopics, getCompletedSubtopics, isSubtopicDue, markSubtopicCompleted, updateSubtopicReviewDate, markFlashcardAsShown, getShownFlashcards, loadUsers, saveUsers, isDayShiftCompleted, getIncorrectlyAnsweredDueFlashcards, setBatchCompletionTime } from '../services/userService.js';
+import { updateUserReviewData, getUserReviewData, startNewSession, getSessionSubtopics, getCompletedSubtopics, isSubtopicDue, markSubtopicCompleted, updateSubtopicReviewDate, markFlashcardAsShown, getShownFlashcards, loadUsers, saveUsers, isDayShiftCompleted, getIncorrectlyAnsweredDueFlashcards, setBatchCompletionTime, getCurrentBatchFlashcards, getPreviousBatchFlashcards, setCurrentBatchFlashcards, addToPreviousBatches, clearCurrentBatch, getBatchCompletionTime, getCurrentBatchIndex, incrementCurrentBatchIndex } from '../services/userService.js';
 import { calculateNextReviewDate, getAllDueQuestions, getDueFlashcardSubtopics, calculateSubtopicNextReviewDate } from '../services/spacedRepService.js';
 
 let cachedTopicMap = null;
@@ -188,6 +188,30 @@ export async function startSession(req, res) {
     // Check if force parameter is provided (to force new session even if one exists)
     const forceNew = req.query.force === 'true' || req.query.force === '1';
     
+    // Check cooldown if forcing new session
+    if (forceNew) {
+      const batchCompletionTime = getBatchCompletionTime(userId);
+      if (batchCompletionTime !== null) {
+        const now = Date.now();
+        const elapsed = now - batchCompletionTime;
+        const cooldownMs = 5 * 60 * 1000; // 5 minutes in milliseconds
+        
+        if (elapsed < cooldownMs) {
+          const remainingSeconds = Math.ceil((cooldownMs - elapsed) / 1000);
+          const minutes = Math.floor(remainingSeconds / 60);
+          const seconds = remainingSeconds % 60;
+          const remainingTime = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+          
+          return res.status(429).json({
+            error: 'Cooldown active',
+            canStart: false,
+            remainingSeconds,
+            remainingTime
+          });
+        }
+      }
+    }
+    
     // Check if user already has an active session
     const existingSession = getSessionSubtopics(userId);
     
@@ -213,7 +237,7 @@ export async function startSession(req, res) {
       if (allSubtopics.length === 0) {
         return res.status(404).json({ error: 'No subtopics available' });
       }
-      batch = { subtopics: pickRandomSubtopics(6) };
+      batch = { flashcardIds: [], subtopics: pickRandomSubtopics(6) };
     }
     
     if (batch.subtopics.length === 0) {
@@ -225,6 +249,11 @@ export async function startSession(req, res) {
       
       // Pick 6 random subtopics
       batch.subtopics = pickRandomSubtopics(6);
+    }
+    
+    // Store batch IDs if available
+    if (batch.flashcardIds && batch.flashcardIds.length > 0) {
+      setCurrentBatchFlashcards(userId, batch.flashcardIds);
     }
     
     // Store session in user's reviewData (this also resets shownFlashcards)
@@ -305,6 +334,42 @@ export async function getRandomFlashcardJson(req, res) {
         return res.status(404).json({ error: 'No flashcards available' });
       }
       return res.json(flashcard);
+    }
+    
+    // Priority 0: Check if there's an active batch and serve from it
+    const currentBatchFlashcards = getCurrentBatchFlashcards(userId);
+    const currentBatchIndex = getCurrentBatchIndex(userId);
+    
+    if (currentBatchFlashcards && currentBatchFlashcards.length > 0) {
+      // Check if we've exhausted the batch
+      if (currentBatchIndex >= currentBatchFlashcards.length) {
+        // Batch exhausted
+        return res.json({ allCompleted: true, message: 'Batch completed', sessionSubtopics: [] });
+      }
+      
+      // Serve next flashcard from batch
+      const flashcardId = currentBatchFlashcards[currentBatchIndex];
+      const data = loadQuestions();
+      const question = data.questions.find(q => q.id === flashcardId);
+      
+      if (question && question.flashcard && question.flashcard.trim() !== '') {
+        const topic = data.topics.find(t => t.id === question.topicId);
+        const flashcardData = {
+          questionId: question.id,
+          flashcard: question.flashcard,
+          flashcardAnswer: question.flashcardAnswer || '',
+          topic: topic ? topic.name : question.topicId,
+          subTopic: question.subTopic || topic?.name || question.topicId,
+          topicId: question.topicId,
+          hint: topic?.hint || `Learn fundamental concepts and applications of ${topic ? topic.name : question.topicId}.`
+        };
+        
+        // Increment batch index and mark as shown
+        incrementCurrentBatchIndex(userId);
+        markFlashcardAsShown(userId, flashcardData.questionId);
+        
+        return res.json(flashcardData);
+      }
     }
     
     // Priority 1: Check for due spaced repetition questions
@@ -963,6 +1028,7 @@ export async function checkNewBatch(req, res) {
 /**
  * POST /flashcards/complete-batch
  * Stores the batch completion time when a batch of 6 flashcards is completed
+ * Moves current batch to previous batches
  * Requires JWT authentication
  * Body: { timestamp: number } - timestamp in milliseconds since epoch
  * Returns: { success: boolean, message?: string }
@@ -979,6 +1045,23 @@ export async function completeBatch(req, res) {
     
     if (!timestamp || typeof timestamp !== 'number') {
       return res.status(400).json({ error: 'timestamp is required and must be a number' });
+    }
+    
+    // Get current batch flashcard IDs
+    const currentBatchFlashcards = getCurrentBatchFlashcards(userId);
+    
+    // Move current batch to previous batches if it exists
+    if (currentBatchFlashcards && currentBatchFlashcards.length > 0) {
+      const addSuccess = addToPreviousBatches(userId, currentBatchFlashcards);
+      if (!addSuccess) {
+        console.error('Failed to add current batch to previous batches');
+      }
+      
+      // Clear current batch
+      const clearSuccess = clearCurrentBatch(userId);
+      if (!clearSuccess) {
+        console.error('Failed to clear current batch');
+      }
     }
     
     // Store batch completion time
@@ -1044,6 +1127,143 @@ export async function createNewBatch(req, res) {
   } catch (err) {
     console.error('Error creating new batch:', err);
     return res.status(500).json({ error: 'Failed to create new batch' });
+  }
+}
+
+/**
+ * GET /flashcards/get-batch
+ * Gets a new batch of exactly 6 flashcards
+ * Checks cooldown before generating batch
+ * Requires JWT authentication
+ * Returns: { flashcards: FlashcardData[], batchSize: number } or error with cooldown info
+ */
+export async function getBatch(req, res) {
+  try {
+    const userId = req.userId; // Set by authenticateUser middleware (required)
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    // Check cooldown
+    const batchCompletionTime = getBatchCompletionTime(userId);
+    if (batchCompletionTime !== null) {
+      const now = Date.now();
+      const elapsed = now - batchCompletionTime;
+      const cooldownMs = 5 * 60 * 1000; // 5 minutes in milliseconds
+      
+      if (elapsed < cooldownMs) {
+        const remainingSeconds = Math.ceil((cooldownMs - elapsed) / 1000);
+        const minutes = Math.floor(remainingSeconds / 60);
+        const seconds = remainingSeconds % 60;
+        const remainingTime = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        
+        return res.status(429).json({
+          error: 'Cooldown active',
+          canStart: false,
+          remainingSeconds,
+          remainingTime
+        });
+      }
+    }
+    
+    // Cooldown expired or no completion time - generate new batch
+    const batch = composeBatch(userId, 6);
+    
+    if (!batch.flashcardIds || batch.flashcardIds.length === 0) {
+      return res.status(404).json({ error: 'No flashcards available for batch' });
+    }
+    
+    // Load full flashcard data for each ID
+    const data = loadQuestions();
+    const flashcards = [];
+    
+    for (const flashcardId of batch.flashcardIds) {
+      const question = data.questions.find(q => q.id === flashcardId);
+      if (question && question.flashcard && question.flashcard.trim() !== '') {
+        const topic = data.topics.find(t => t.id === question.topicId);
+        flashcards.push({
+          questionId: question.id,
+          flashcard: question.flashcard,
+          flashcardAnswer: question.flashcardAnswer || '',
+          topic: topic ? topic.name : question.topicId,
+          subTopic: question.subTopic || topic?.name || question.topicId,
+          topicId: question.topicId,
+          hint: topic?.hint || `Learn fundamental concepts and applications of ${topic ? topic.name : question.topicId}.`
+        });
+      }
+    }
+    
+    // Store batch IDs in user data
+    const success = setCurrentBatchFlashcards(userId, batch.flashcardIds);
+    
+    if (!success) {
+      return res.status(500).json({ error: 'Failed to store batch data' });
+    }
+    
+    return res.json({
+      flashcards,
+      batchSize: flashcards.length
+    });
+  } catch (err) {
+    console.error('Error getting batch:', err);
+    return res.status(500).json({ error: 'Failed to get batch' });
+  }
+}
+
+/**
+ * GET /flashcards/get-cooldown
+ * Gets the current cooldown status for the user
+ * Requires JWT authentication
+ * Returns: { canStart: boolean, remainingSeconds: number, remainingTime: string }
+ */
+export async function getUserCooldown(req, res) {
+  try {
+    const userId = req.userId; // Set by authenticateUser middleware (required)
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    const batchCompletionTime = getBatchCompletionTime(userId);
+    
+    // If no completion time, user can start immediately
+    if (batchCompletionTime === null) {
+      return res.json({
+        canStart: true,
+        remainingSeconds: 0,
+        remainingTime: '00:00'
+      });
+    }
+    
+    // Calculate elapsed time
+    const now = Date.now();
+    const elapsed = now - batchCompletionTime;
+    const cooldownMs = 5 * 60 * 1000; // 5 minutes in milliseconds
+    
+    if (elapsed >= cooldownMs) {
+      // Cooldown expired
+      return res.json({
+        canStart: true,
+        remainingSeconds: 0,
+        remainingTime: '00:00'
+      });
+    } else {
+      // Cooldown still active
+      const remainingSeconds = Math.ceil((cooldownMs - elapsed) / 1000);
+      const minutes = Math.floor(remainingSeconds / 60);
+      const seconds = remainingSeconds % 60;
+      const remainingTime = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+      
+      return res.json({
+        canStart: false,
+        remainingSeconds,
+        remainingTime
+      });
+    }
+  } catch (err) {
+    console.error('Error getting cooldown:', err);
+    return res.status(500).json({ error: 'Failed to get cooldown status' });
   }
 }
 

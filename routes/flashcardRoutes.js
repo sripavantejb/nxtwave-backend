@@ -14,7 +14,9 @@ import {
   resetShownFlashcards,
   checkNewBatch,
   createNewBatch,
-  completeBatch
+  completeBatch,
+  getBatch,
+  getUserCooldown
 } from '../controllers/flashcardController.js';
 import { optionalAuth, authenticateUser } from '../middleware/auth.js';
 
@@ -39,6 +41,8 @@ router.post('/reset-shown', authenticateUser, resetShownFlashcards);
 router.post('/complete-batch', authenticateUser, completeBatch);
 router.get('/check-new-batch', authenticateUser, checkNewBatch);
 router.post('/create-new-batch', authenticateUser, createNewBatch);
+router.get('/get-batch', authenticateUser, getBatch);
+router.get('/get-cooldown', authenticateUser, getUserCooldown);
 
 // Question routes (optional auth for flexibility)
 router.get('/question/followup/:topic/:difficulty', optionalAuth, getFollowUpQuestionJson);
