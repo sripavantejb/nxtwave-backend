@@ -544,6 +544,7 @@ export async function submitRating(req, res) {
  * GET /question/followup/:topic/:difficulty
  * Returns a follow-up question based on topic and difficulty
  * Respects per-user spaced repetition scheduling
+ * Implements fallback logic to find questions when exact match fails
  * Query params: ?subTopic=... (optional), ?flashcardQuestionId=... (optional)
  */
 export async function getFollowUpQuestionJson(req, res) {
@@ -563,16 +564,24 @@ export async function getFollowUpQuestionJson(req, res) {
       return res.status(400).json({ error: 'Invalid difficulty. Must be Easy, Medium, or Hard.' });
     }
     
+    // Try to get follow-up question with fallback logic
     const question = getFollowUpQuestionFromJson(topic, difficulty, userId, subTopic, flashcardQuestionId);
     
     if (!question) {
-      return res.status(404).json({ error: 'No follow-up questions available for this topic and difficulty' });
+      // With fallback logic, this should be very rare - only if no questions exist for the topic at all
+      return res.status(404).json({ 
+        error: 'No follow-up questions available for this topic and difficulty',
+        message: 'No questions found for this topic after trying all fallback strategies'
+      });
     }
     
     return res.json(question);
   } catch (err) {
     console.error('Error fetching follow-up question:', err);
-    return res.status(500).json({ error: 'Failed to fetch follow-up question' });
+    return res.status(500).json({ 
+      error: 'Failed to fetch follow-up question',
+      message: err instanceof Error ? err.message : 'Unknown error occurred'
+    });
   }
 }
 

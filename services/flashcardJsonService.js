@@ -268,6 +268,7 @@ export function composeBatch(userId, batchSize = 6) {
 /**
  * Get a follow-up question based on topic, difficulty, and subtopic
  * Respects per-user spaced repetition scheduling
+ * Implements progressive fallback logic to find questions when exact match fails
  * @param {string} topicId - The topic ID
  * @param {string} difficulty - "Easy", "Medium", or "Hard"
  * @param {string} userId - Optional user ID for per-user tracking
@@ -282,76 +283,134 @@ export function getFollowUpQuestion(topicId, difficulty, userId = null, subTopic
   // Handle both "Easy"/"Medium"/"Hard" and "easy"/"medium"/"hard"
   const difficultyLower = String(difficulty || '').toLowerCase().trim();
   
-  // Filter questions by topic and difficulty
-  // Only include questions that have actual question text (not just flashcards)
-  let candidateQuestions = data.questions.filter(
-    q => q.topicId === topicId && 
-         String(q.difficulty || '').toLowerCase().trim() === difficultyLower &&
-         q.question && 
-         q.question.trim() !== '' &&
-         q.options && 
-         q.options.length >= 2
-  );
+  // Helper function to filter and select a question
+  const findQuestion = (filters) => {
+    let candidates = data.questions.filter(
+      q => q.topicId === topicId && 
+           q.question && 
+           q.question.trim() !== '' &&
+           q.options && 
+           q.options.length >= 2
+    );
+    
+    // Apply difficulty filter if specified
+    if (filters.difficulty !== null) {
+      candidates = candidates.filter(q => 
+        String(q.difficulty || '').toLowerCase().trim() === filters.difficulty
+      );
+    }
+    
+    // Apply flashcard text filter if specified
+    if (filters.flashcardText !== null) {
+      candidates = candidates.filter(q => {
+        if (!q.flashcard) return false;
+        const qFlashcardText = q.flashcard.trim().replace(/\s+/g, ' ');
+        return qFlashcardText === filters.flashcardText;
+      });
+    }
+    
+    // Apply subtopic filter if specified
+    if (filters.subTopic !== null) {
+      const subTopicNormalized = filters.subTopic.trim().toLowerCase().replace(/\s+/g, ' ');
+      candidates = candidates.filter(q => {
+        const qSubTopic = (q.subTopic || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        return qSubTopic === subTopicNormalized;
+      });
+    }
+    
+    if (candidates.length === 0) {
+      return null;
+    }
+    
+    // Check spaced repetition eligibility
+    let eligibleQuestions;
+    if (userId) {
+      const eligibleIds = getEligibleQuestionIdsForUser(userId, candidates.map(q => q.id));
+      eligibleQuestions = candidates.filter(q => eligibleIds.includes(q.id));
+    } else {
+      eligibleQuestions = candidates;
+    }
+    
+    // If no eligible questions, fall back to any matching question
+    if (eligibleQuestions.length === 0) {
+      eligibleQuestions = candidates;
+    }
+    
+    // Pick a random eligible question
+    const randomIndex = Math.floor(Math.random() * eligibleQuestions.length);
+    return eligibleQuestions[randomIndex];
+  };
   
-  // If flashcardQuestionId is provided, filter questions to match that specific flashcard
-  // This ensures questions are matched to the flashcard's concept, not just subtopic
+  // Get flashcard text if flashcardQuestionId is provided
+  let flashcardText = null;
   if (flashcardQuestionId && flashcardQuestionId.trim() !== '') {
     const flashcardQuestion = data.questions.find(q => q.id === flashcardQuestionId);
-    
     if (flashcardQuestion && flashcardQuestion.flashcard) {
-      // Normalize flashcard text: trim and normalize whitespace (replace multiple spaces with single space)
-      const flashcardText = flashcardQuestion.flashcard.trim().replace(/\s+/g, ' ');
-      // Filter questions to only those that have the same flashcard text (normalized)
-      // This matches questions to the specific flashcard concept
-      candidateQuestions = candidateQuestions.filter(q => {
-        if (!q.flashcard) return false;
-        // Normalize both texts for comparison
-        const qFlashcardText = q.flashcard.trim().replace(/\s+/g, ' ');
-        return qFlashcardText === flashcardText;
-      });
-    } else {
-      // If flashcard question not found or has no flashcard text, return null
-      console.log(`Flashcard question with ID ${flashcardQuestionId} not found or has no flashcard text. Returning null.`);
-      return null;
+      flashcardText = flashcardQuestion.flashcard.trim().replace(/\s+/g, ' ');
     }
   }
   
-  // If subtopic is provided, filter by subtopic (case-insensitive, trimmed) - MANDATORY, no fallback
-  if (subTopic && subTopic.trim() !== '') {
-    const subTopicNormalized = subTopic.trim().toLowerCase().replace(/\s+/g, ' ');
-    candidateQuestions = candidateQuestions.filter(q => {
-      const qSubTopic = (q.subTopic || '').trim().toLowerCase().replace(/\s+/g, ' ');
-      // Case-insensitive matching with normalized whitespace - strict filtering, no fallback
-      return qSubTopic === subTopicNormalized;
+  // Progressive fallback strategy:
+  // 1. Try exact match: topic + difficulty + subtopic + flashcard text
+  let question = findQuestion({
+    difficulty: difficultyLower,
+    subTopic: subTopic || null,
+    flashcardText: flashcardText
+  });
+  
+  if (question) {
+    return formatQuestionResponse(question);
+  }
+  
+  // 2. Try without flashcard text filter: topic + difficulty + subtopic
+  if (flashcardText) {
+    question = findQuestion({
+      difficulty: difficultyLower,
+      subTopic: subTopic || null,
+      flashcardText: null
     });
+    
+    if (question) {
+      console.log(`Fallback: Found question without flashcard text match for topicId: ${topicId}, difficulty: ${difficultyLower}, subTopic: ${subTopic}`);
+      return formatQuestionResponse(question);
+    }
   }
   
-  // If no questions found for this exact topic/difficulty/subtopic/flashcard combo, return null (NO fallbacks)
-  if (candidateQuestions.length === 0) {
-    console.log(`No follow-up questions found for topicId: ${topicId}, difficulty: ${difficultyLower}, subTopic: ${subTopic}, flashcardQuestionId: ${flashcardQuestionId}. Returning null.`);
-    return null;
+  // 3. Try without subtopic filter: topic + difficulty
+  if (subTopic && subTopic.trim() !== '') {
+    question = findQuestion({
+      difficulty: difficultyLower,
+      subTopic: null,
+      flashcardText: null
+    });
+    
+    if (question) {
+      console.log(`Fallback: Found question without subtopic match for topicId: ${topicId}, difficulty: ${difficultyLower}`);
+      return formatQuestionResponse(question);
+    }
   }
   
-  // Check spaced repetition eligibility
-  let eligibleQuestions;
-  if (userId) {
-    // Use per-user review data
-    const eligibleIds = getEligibleQuestionIdsForUser(userId, candidateQuestions.map(q => q.id));
-    eligibleQuestions = candidateQuestions.filter(q => eligibleIds.includes(q.id));
-  } else {
-    // For non-authenticated users, allow all questions
-    eligibleQuestions = candidateQuestions;
+  // 4. Try same topic with any difficulty
+  question = findQuestion({
+    difficulty: null,
+    subTopic: null,
+    flashcardText: null
+  });
+  
+  if (question) {
+    console.log(`Fallback: Found question with any difficulty for topicId: ${topicId}`);
+    return formatQuestionResponse(question);
   }
   
-  // If no eligible questions, fall back to any matching question
-  if (eligibleQuestions.length === 0) {
-    eligibleQuestions = candidateQuestions;
-  }
-  
-  // Pick a random eligible question
-  const randomIndex = Math.floor(Math.random() * eligibleQuestions.length);
-  const question = eligibleQuestions[randomIndex];
-  
+  // 5. No questions found for this topic at all
+  console.log(`No follow-up questions found for topicId: ${topicId} (tried all fallback strategies)`);
+  return null;
+}
+
+/**
+ * Helper function to format a question object into the response format
+ */
+function formatQuestionResponse(question) {
   // Format options as {A: ..., B: ..., C: ..., D: ...}
   const options = {};
   const optionLabels = ['A', 'B', 'C', 'D'];
@@ -370,7 +429,7 @@ export function getFollowUpQuestion(topicId, difficulty, userId = null, subTopic
     options,
     key,
     explanation: question.explanation,
-    difficulty: question.difficulty.charAt(0).toUpperCase() + question.difficulty.slice(1), // Use actual question difficulty, not requested
+    difficulty: question.difficulty.charAt(0).toUpperCase() + question.difficulty.slice(1),
     topic: question.topicId
   };
 }
