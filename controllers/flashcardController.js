@@ -13,10 +13,11 @@ import {
   getQuestionById,
   loadQuestions,
   pickRandomSubtopics,
-  getRandomFlashcard as getRandomFlashcardFromService
+  getRandomFlashcard as getRandomFlashcardFromService,
+  getAllUniqueSubtopics
 } from '../services/flashcardJsonService.js';
 import { updateReviewSchedule } from '../utils/reviewSchedule.js';
-import { updateUserReviewData, getUserReviewData, startNewSession, getSessionSubtopics, getCompletedSubtopics, isSubtopicDue, markSubtopicCompleted, updateSubtopicReviewDate, markFlashcardAsShown } from '../services/userService.js';
+import { updateUserReviewData, getUserReviewData, startNewSession, getSessionSubtopics, getCompletedSubtopics, isSubtopicDue, markSubtopicCompleted, updateSubtopicReviewDate, markFlashcardAsShown, getShownFlashcards, loadUsers, saveUsers } from '../services/userService.js';
 import { calculateNextReviewDate, getAllDueQuestions, getDueFlashcardSubtopics, calculateSubtopicNextReviewDate } from '../services/spacedRepService.js';
 
 let cachedTopicMap = null;
@@ -56,6 +57,28 @@ function topicIdsForFollowUp(topicId) {
     return ['si', 'ci'];
   }
   return [topicId];
+}
+
+/**
+ * Check if a subtopic has flashcards that haven't been shown in the current session
+ * @param {string} subtopic - The subtopic name to check
+ * @param {string} userId - User ID
+ * @returns {boolean} True if there are unshown flashcards in this subtopic, false otherwise
+ */
+function hasUnshownFlashcardsInSubtopic(subtopic, userId) {
+  const data = loadQuestions();
+  const shownFlashcardIds = getShownFlashcards(userId);
+  
+  // Get all flashcards in this subtopic
+  const flashcardsInSubtopic = data.questions.filter(
+    q => q.flashcard && 
+         q.flashcard.trim() !== '' && 
+         q.subTopic && 
+         q.subTopic.trim().toLowerCase() === subtopic.trim().toLowerCase()
+  );
+  
+  // Check if there's at least one flashcard that hasn't been shown
+  return flashcardsInSubtopic.some(q => !shownFlashcardIds.includes(q.id));
 }
 
 function enrichAndRespond(res, question, topicMeta) {
@@ -135,9 +158,9 @@ export async function getFollowUpFlashcard(req, res) {
 
 /**
  * GET /flashcards/start-session
- * Initializes a new session with 6 random subtopics
+ * Initializes a new session with all available subtopics
  * Requires JWT authentication
- * Returns the 6 subtopics selected for this session
+ * Returns all subtopics selected for this session
  */
 export async function startSession(req, res) {
   try {
@@ -153,30 +176,63 @@ export async function startSession(req, res) {
     // Check if user already has an active session
     const existingSession = getSessionSubtopics(userId);
     
-    // If session exists and has subtopics, and not forcing new session, return existing session
+    // If session exists and has subtopics, and not forcing new session
+    // Check if it's an old session with exactly 6 subtopics (old limit) and upgrade it
     if (!forceNew && existingSession && existingSession.length > 0) {
-      return res.json({
-        sessionSubtopics: existingSession,
-        isNewSession: false
+      // If session has exactly 6 subtopics, it's from the old format - always upgrade it
+      if (existingSession.length === 6) {
+        // Force recreation of session with all subtopics
+        // Clear the old session by calling startNewSession with empty array first
+        startNewSession(userId, []);
+        // (fall through to create new session below)
+      } else {
+        // Session has more than 6 subtopics, it's already upgraded - return it
+        return res.json({
+          sessionSubtopics: existingSession,
+          isNewSession: false
+        });
+      }
+    }
+    
+    // Get due questions first (incorrectly answered questions from previous session)
+    const dueQuestionIds = getAllDueQuestions(userId);
+    const data = loadQuestions();
+    
+    // Extract unique subtopics from due questions
+    const dueSubtopicsSet = new Set();
+    if (dueQuestionIds.length > 0) {
+      dueQuestionIds.forEach(questionId => {
+        const question = data.questions.find(q => q.id === questionId && q.flashcard && q.flashcard.trim() !== '');
+        if (question && question.subTopic && question.subTopic.trim() !== '') {
+          dueSubtopicsSet.add(question.subTopic.trim());
+        }
       });
     }
     
-    // Pick 6 random subtopics
-    const subtopics = pickRandomSubtopics(6);
+    // Get all available subtopics from entire CSV
+    const allSubtopics = getAllUniqueSubtopics();
     
-    if (subtopics.length === 0) {
+    if (allSubtopics.length === 0) {
       return res.status(404).json({ error: 'No subtopics available' });
     }
     
+    // Create session with due subtopics + all remaining subtopics (no limit)
+    const dueSubtopics = Array.from(dueSubtopicsSet);
+    const remainingSubtopics = allSubtopics.filter(st => !dueSubtopics.includes(st));
+    
+    // Combine: due subtopics first, then all remaining ones
+    // Include ALL available subtopics in the session
+    let sessionSubtopics = [...dueSubtopics, ...remainingSubtopics];
+    
     // Store session in user's reviewData (this also resets shownFlashcards)
-    const success = startNewSession(userId, subtopics);
+    const success = startNewSession(userId, sessionSubtopics);
     
     if (!success) {
       return res.status(500).json({ error: 'Failed to start session' });
     }
     
     return res.json({
-      sessionSubtopics: subtopics,
+      sessionSubtopics: sessionSubtopics,
       isNewSession: true
     });
   } catch (err) {
@@ -186,9 +242,45 @@ export async function startSession(req, res) {
 }
 
 /**
+ * POST /flashcards/reset-shown
+ * Resets the shown flashcards list for the current session
+ * Used when continuing after completing a batch of flashcards
+ * Requires JWT authentication
+ */
+export async function resetShownFlashcards(req, res) {
+  try {
+    const userId = req.userId; // Set by authenticateUser middleware (required)
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    const users = loadUsers();
+    
+    // Initialize user data if it doesn't exist
+    if (!users[userId]) {
+      users[userId] = { reviewData: {} };
+    }
+    
+    if (!users[userId].reviewData) {
+      users[userId].reviewData = {};
+    }
+    
+    // Reset shown flashcards
+    users[userId].reviewData.shownFlashcards = [];
+    saveUsers(users);
+    
+    return res.json({ success: true, message: 'Shown flashcards reset' });
+  } catch (err) {
+    console.error('Error resetting shown flashcards:', err);
+    return res.status(500).json({ error: 'Failed to reset shown flashcards' });
+  }
+}
+
+/**
  * GET /flashcard/random-json
  * Returns a random flashcard from topics_until_percentages.csv
- * Prioritizes due reviews, then shows flashcards from session's 6 subtopics
+ * Prioritizes due reviews, then shows flashcards from session's subtopics
  * Excludes completed subtopics unless they are due for review
  * Supports authenticated users for per-user tracking
  */
@@ -249,34 +341,124 @@ export async function getRandomFlashcardJson(req, res) {
       });
     }
     
-    // Filter session subtopics: include due ones and exclude completed ones (unless due)
+    // Check if this is a fresh session (no flashcards shown yet)
+    const shownFlashcardIds = getShownFlashcards(userId);
+    const isFreshSession = shownFlashcardIds.length === 0;
+    
+    // Filter session subtopics: include due ones and exclude completed ones only if they have no unshown flashcards
     const eligibleSubtopics = sessionSubtopics.filter(subtopic => {
-      // Include if due for review
+      // Always include if due for review (maintains spaced repetition algorithm)
       if (dueSubtopics.includes(subtopic)) {
         return true;
       }
-      // Exclude if completed and not due
-      if (completedSubtopics.includes(subtopic) && !dueSubtopics.includes(subtopic)) {
-        return false;
+      // For fresh sessions, include all subtopics (since none have been shown yet)
+      if (isFreshSession) {
+        return true;
       }
-      // Include if not completed
+      // For completed subtopics that are NOT due, check if they have unshown flashcards
+      if (completedSubtopics.includes(subtopic) && !dueSubtopics.includes(subtopic)) {
+        // Only exclude if there are no unshown flashcards in this subtopic
+        return hasUnshownFlashcardsInSubtopic(subtopic, userId);
+      }
+      // Always include if not completed (existing behavior)
       return true;
     });
     
-    if (eligibleSubtopics.length === 0) {
-      // All subtopics completed - suggest starting new session
-      return res.status(200).json({
-        message: 'All subtopics in this session are completed. Start a new session to continue.',
-        allCompleted: true,
-        sessionSubtopics
-      });
+    // If no eligible subtopics but session has subtopics, check if we should include all
+    // This handles the case where a new session starts but all subtopics are marked as completed
+    // We should still allow access if there are flashcards available
+    let finalEligibleSubtopics = eligibleSubtopics;
+    if (eligibleSubtopics.length === 0 && sessionSubtopics.length > 0) {
+      const data = loadQuestions();
+      const allQuestionsWithFlashcards = data.questions.filter(
+        q => q.flashcard && q.flashcard.trim() !== ''
+      );
+      const questionsInSessionSubtopics = allQuestionsWithFlashcards.filter(
+        q => q.subTopic && sessionSubtopics.some(st => 
+          q.subTopic.trim().toLowerCase() === st.trim().toLowerCase()
+        )
+      );
+      // If there are flashcards in session subtopics, use all session subtopics
+      if (questionsInSessionSubtopics.length > 0) {
+        finalEligibleSubtopics = sessionSubtopics;
+      }
     }
     
-    // Get flashcard from eligible subtopics
-    const flashcard = getRandomFlashcardFromService(userId, eligibleSubtopics);
+    // Select from entire database - getRandomFlashcardFromService already implements spaced repetition:
+    // Priority 1: Due questions (bypasses filters, from entire database)
+    // Priority 2: New flashcards (not in reviewData, from entire database)
+    // Priority 3: All available flashcards (from entire database)
+    let flashcard = getRandomFlashcardFromService(userId, null);
     
+    // If still no flashcard found, check if all flashcards have been shown and reset if needed
     if (!flashcard) {
-      return res.status(404).json({ error: 'No flashcards available for selected subtopics' });
+      const shownFlashcardIds = getShownFlashcards(userId);
+      const data = loadQuestions();
+      const allQuestionsWithFlashcards = data.questions.filter(
+        q => q.flashcard && q.flashcard.trim() !== ''
+      );
+      
+      // If there are flashcards but all have been shown, reset shownFlashcards
+      if (allQuestionsWithFlashcards.length > 0 && shownFlashcardIds.length > 0) {
+        // Check if all flashcards have been shown
+        const allShown = allQuestionsWithFlashcards.every(q => shownFlashcardIds.includes(q.id));
+        if (allShown) {
+          // Reset shown flashcards to allow cycling through again
+          const users = loadUsers();
+          if (users[userId] && users[userId].reviewData) {
+            users[userId].reviewData.shownFlashcards = [];
+            saveUsers(users);
+          }
+          // Try again after reset - from entire CSV
+          flashcard = getRandomFlashcardFromService(userId, null);
+        }
+      }
+    }
+    
+    // Never return allCompleted - always try to return a flashcard
+    // If no flashcard found after all attempts, reset shownFlashcards and try again
+    if (!flashcard) {
+      const data = loadQuestions();
+      const allQuestionsWithFlashcards = data.questions.filter(
+        q => q.flashcard && q.flashcard.trim() !== ''
+      );
+      
+      // If there are no flashcards at all in the CSV, return error
+      if (allQuestionsWithFlashcards.length === 0) {
+        return res.status(404).json({ error: 'No flashcards available in the system' });
+      }
+      
+      // Reset shown flashcards and try again from entire CSV
+      const users = loadUsers();
+      if (users[userId] && users[userId].reviewData) {
+        users[userId].reviewData.shownFlashcards = [];
+        saveUsers(users);
+      }
+      
+      // Try one more time from entire CSV
+      flashcard = getRandomFlashcardFromService(userId, null);
+      
+      // If still no flashcard, return a random one from CSV (bypass all filters)
+      if (!flashcard && allQuestionsWithFlashcards.length > 0) {
+        const randomIndex = Math.floor(Math.random() * allQuestionsWithFlashcards.length);
+        const question = allQuestionsWithFlashcards[randomIndex];
+        const topic = data.topics.find(t => t.id === question.topicId);
+        
+        flashcard = {
+          questionId: question.id,
+          flashcard: question.flashcard,
+          flashcardAnswer: question.flashcardAnswer,
+          topic: topic ? topic.name : question.topicId,
+          subTopic: question.subTopic || topic?.name || question.topicId,
+          topicId: question.topicId,
+          hint: topic?.hint || `Learn fundamental concepts and applications of ${topic ? topic.name : question.topicId}.`
+        };
+      }
+      
+      // If we still don't have a flashcard, something is seriously wrong
+      if (!flashcard) {
+        return res.status(500).json({ error: 'Failed to fetch flashcard' });
+      }
     }
     
     // Mark this flashcard as shown in the current session to avoid repetition
@@ -486,6 +668,27 @@ export async function submitAnswer(req, res) {
       nextReviewDate: nextReviewDate.toISOString(),
       timesReviewed
     });
+    
+    // Also store review data for the flashcard question ID if provided
+    // This ensures incorrectly answered flashcards appear as due after the day shift
+    if (flashcardQuestionId && flashcardQuestionId.trim() !== '') {
+      // Get existing review data for flashcard
+      const flashcardExistingReview = getUserReviewData(userId)[flashcardQuestionId];
+      
+      // Calculate timesReviewed for flashcard - increment if exists, otherwise set to 1
+      const flashcardTimesReviewed = flashcardExistingReview && flashcardExistingReview.timesReviewed 
+        ? flashcardExistingReview.timesReviewed + 1 
+        : 1;
+      
+      // Store review data for the flashcard with the same nextReviewDate
+      // This ensures the flashcard will appear as due when the review date arrives
+      updateUserReviewData(userId, flashcardQuestionId, {
+        difficulty: difficultyForReview,
+        lastAnswerCorrect: result.correct,
+        nextReviewDate: nextReviewDate.toISOString(),
+        timesReviewed: flashcardTimesReviewed
+      });
+    }
     
     // If this is a follow-up question from a flashcard, mark the flashcard subtopic as completed
     if (flashcardSubTopic && flashcardSubTopic.trim() !== '') {

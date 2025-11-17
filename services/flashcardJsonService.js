@@ -1,5 +1,5 @@
 import { loadQuestionsFromCSV } from './csvQuestionService.js';
-import { getEligibleQuestionIdsForUser, getUserReviewData, getShownFlashcards } from './userService.js';
+import { getEligibleQuestionIdsForUser, getUserReviewData, getShownFlashcards, loadUsers, saveUsers } from './userService.js';
 import { getAllDueQuestions } from './spacedRepService.js';
 
 /**
@@ -76,37 +76,53 @@ export function getRandomFlashcard(userId = null, allowedSubtopics = null) {
   
   // If user is authenticated, check for due reviews first (prioritize)
   if (userId) {
+    // Priority 1: Check for due flashcards FIRST, before any filtering
+    // Due flashcards bypass shownFlashcards filter completely
+    const dueQuestionIds = getAllDueQuestions(userId);
+    if (dueQuestionIds.length > 0) {
+      // Get all flashcards that are due (bypass shownFlashcards filter)
+      const dueFlashcards = questionsWithFlashcards.filter(q => dueQuestionIds.includes(q.id));
+      
+      if (dueFlashcards.length > 0) {
+        // Return random due flashcard (bypasses shownFlashcards filter)
+        const randomIndex = Math.floor(Math.random() * dueFlashcards.length);
+        const question = dueFlashcards[randomIndex];
+        const topic = data.topics.find(t => t.id === question.topicId);
+        
+        return {
+          questionId: question.id,
+          flashcard: question.flashcard,
+          flashcardAnswer: question.flashcardAnswer,
+          topic: topic ? topic.name : question.topicId,
+          subTopic: question.subTopic || topic?.name || question.topicId,
+          topicId: question.topicId,
+          hint: topic?.hint || `Learn fundamental concepts and applications of ${topic ? topic.name : question.topicId}.`
+        };
+      }
+    }
+    
+    // Priority 2: Get new flashcards (not in reviewData, filtered by shownFlashcards)
     // Get flashcards already shown in this session to avoid repetition
     const shownFlashcardIds = getShownFlashcards(userId);
     
-    // Filter out already shown flashcards
+    // Filter out already shown flashcards (only for new flashcards, not due ones)
     let availableFlashcards = questionsWithFlashcards.filter(
       q => !shownFlashcardIds.includes(q.id)
     );
     
     // If all flashcards are shown, reset and use all (for new session)
     if (availableFlashcards.length === 0) {
+      // Reset shown flashcards in the database to allow cycling through again
+      // This is safe because:
+      // 1. Due flashcards are still prioritized (checked before this point)
+      // 2. Spaced repetition data (reviewData) is separate and untouched
+      // 3. This only affects session-level repetition, not review scheduling
+      const users = loadUsers();
+      if (users[userId] && users[userId].reviewData) {
+        users[userId].reviewData.shownFlashcards = [];
+        saveUsers(users);
+      }
       availableFlashcards = questionsWithFlashcards;
-    }
-    
-    const dueQuestionIds = getAllDueQuestions(userId);
-    const dueFlashcards = availableFlashcards.filter(q => dueQuestionIds.includes(q.id));
-    
-    // If due flashcards exist, return random one (excluding shown ones)
-    if (dueFlashcards.length > 0) {
-      const randomIndex = Math.floor(Math.random() * dueFlashcards.length);
-      const question = dueFlashcards[randomIndex];
-      const topic = data.topics.find(t => t.id === question.topicId);
-      
-      return {
-        questionId: question.id,
-        flashcard: question.flashcard,
-        flashcardAnswer: question.flashcardAnswer,
-        topic: topic ? topic.name : question.topicId,
-        subTopic: question.subTopic || topic?.name || question.topicId,
-        topicId: question.topicId,
-        hint: topic?.hint || `Learn fundamental concepts and applications of ${topic ? topic.name : question.topicId}.`
-      };
     }
     
     // No due flashcards, prioritize new flashcards (not in reviewData)
@@ -114,10 +130,17 @@ export function getRandomFlashcard(userId = null, allowedSubtopics = null) {
     const newFlashcards = availableFlashcards.filter(q => !reviewData[q.id]);
     
     // Use new flashcards if available, otherwise use all available (excluding shown)
-    const eligibleQuestions = newFlashcards.length > 0 ? newFlashcards : availableFlashcards;
+    let eligibleQuestions = newFlashcards.length > 0 ? newFlashcards : availableFlashcards;
     
+    // If still no eligible questions, use all flashcards from CSV (last resort)
+    // This ensures we always return a flashcard when CSV has data
+    if (eligibleQuestions.length === 0 && questionsWithFlashcards.length > 0) {
+      eligibleQuestions = questionsWithFlashcards;
+    }
+    
+    // Final fallback: if still no questions, return null (shouldn't happen if CSV has data)
     if (eligibleQuestions.length === 0) {
-      return null; // No more flashcards available
+      return null;
     }
     
     const randomIndex = Math.floor(Math.random() * eligibleQuestions.length);

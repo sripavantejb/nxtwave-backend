@@ -287,7 +287,7 @@ export function getCompletedSubtopics(userId) {
 }
 
 /**
- * Get current session's 6 subtopics for a user
+ * Get current session's subtopics for a user
  * @param {string} userId - User ID
  * @returns {Array<string>} Array of subtopic names in current session
  */
@@ -297,9 +297,9 @@ export function getSessionSubtopics(userId) {
 }
 
 /**
- * Start a new session by picking 6 random subtopics and storing in user data
+ * Start a new session with all available subtopics and store in user data
  * @param {string} userId - User ID
- * @param {Array<string>} subtopics - Array of 6 subtopic names to set as session
+ * @param {Array<string>} subtopics - Array of subtopic names to set as session
  * @returns {boolean} Success status
  */
 export function startNewSession(userId, subtopics) {

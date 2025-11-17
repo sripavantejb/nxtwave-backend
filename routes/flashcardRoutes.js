@@ -10,7 +10,8 @@ import {
   getNextQuestion,
   getDueReviews,
   getConcepts,
-  startSession
+  startSession,
+  resetShownFlashcards
 } from '../controllers/flashcardController.js';
 import { optionalAuth, authenticateUser } from '../middleware/auth.js';
 
@@ -31,6 +32,7 @@ router.post('/submit-rating', authenticateUser, submitRating);
 router.post('/question/submit', authenticateUser, submitAnswer);
 router.get('/next-question', authenticateUser, getNextQuestion);
 router.get('/due-reviews', authenticateUser, getDueReviews);
+router.post('/reset-shown', authenticateUser, resetShownFlashcards);
 
 // Question routes (optional auth for flexibility)
 router.get('/question/followup/:topic/:difficulty', optionalAuth, getFollowUpQuestionJson);

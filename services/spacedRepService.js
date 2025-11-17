@@ -11,21 +11,24 @@ export function calculateNextReviewDate(isCorrect, difficulty) {
   const difficultyLower = String(difficulty || 'medium').toLowerCase();
 
   if (!isCorrect) {
-    // Wrong answer → always 1 day
-    now.setDate(now.getDate() + 1);
+    // Wrong answer → 1 day = 5 minutes
+    now.setMinutes(now.getMinutes() + 5);
     return now;
   }
 
   // Correct answer → schedule based on difficulty
   if (difficultyLower === 'easy') {
-    now.setDate(now.getDate() + 3);
+    // Easy → 3 days = 15 minutes
+    now.setMinutes(now.getMinutes() + 15);
   } else if (difficultyLower === 'medium') {
-    now.setDate(now.getDate() + 5);
+    // Medium → 5 days = 25 minutes
+    now.setMinutes(now.getMinutes() + 25);
   } else if (difficultyLower === 'hard') {
-    now.setDate(now.getDate() + 7);
+    // Hard → 7 days = 35 minutes
+    now.setMinutes(now.getMinutes() + 35);
   } else {
-    // Default to medium if unknown
-    now.setDate(now.getDate() + 5);
+    // Default to medium if unknown → 5 days = 25 minutes
+    now.setMinutes(now.getMinutes() + 25);
   }
 
   return now;
@@ -137,21 +140,24 @@ export function calculateSubtopicNextReviewDate(isCorrect, difficulty) {
   const difficultyLower = String(difficulty || 'medium').toLowerCase();
 
   if (!isCorrect) {
-    // Wrong answer → always 1 day
-    now.setDate(now.getDate() + 1);
+    // Wrong answer → 1 day = 5 minutes
+    now.setMinutes(now.getMinutes() + 5);
     return now;
   }
 
   // Correct answer → schedule based on difficulty
   if (difficultyLower === 'easy') {
-    now.setDate(now.getDate() + 3);
+    // Easy → 3 days = 15 minutes
+    now.setMinutes(now.getMinutes() + 15);
   } else if (difficultyLower === 'medium') {
-    now.setDate(now.getDate() + 5);
+    // Medium → 5 days = 25 minutes
+    now.setMinutes(now.getMinutes() + 25);
   } else if (difficultyLower === 'hard') {
-    now.setDate(now.getDate() + 7);
+    // Hard → 7 days = 35 minutes
+    now.setMinutes(now.getMinutes() + 35);
   } else {
-    // Default to medium if unknown
-    now.setDate(now.getDate() + 5);
+    // Default to medium if unknown → 5 days = 25 minutes
+    now.setMinutes(now.getMinutes() + 25);
   }
 
   return now;

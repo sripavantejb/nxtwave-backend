@@ -49,36 +49,44 @@ function normalizeSelectedOption(selectedOption) {
   return trimmed[0];
 }
 
-function addDays(days) {
+function addMinutes(minutes) {
   const date = new Date();
-  date.setDate(date.getDate() + days);
+  date.setMinutes(date.getMinutes() + minutes);
   return date.toISOString();
 }
 
 function getNextReviewDateFromAnswer(difficultySlug, isCorrect) {
   if (!isCorrect) {
-    return addDays(1);
+    // Wrong answer → 1 day = 5 minutes
+    return addMinutes(5);
   }
   switch (difficultySlug) {
     case 'easy':
-      return addDays(3);
+      // Easy → 3 days = 15 minutes
+      return addMinutes(15);
     case 'medium':
-      return addDays(5);
+      // Medium → 5 days = 25 minutes
+      return addMinutes(25);
     case 'hard':
-      return addDays(7);
+      // Hard → 7 days = 35 minutes
+      return addMinutes(35);
     default:
-      return addDays(3);
+      // Default to easy → 3 days = 15 minutes
+      return addMinutes(15);
   }
 }
 
 function getNextReviewDateFromRating(rating) {
   if (rating <= 2) {
-    return addDays(1);
+    // Rating ≤ 2 → 1 day = 5 minutes
+    return addMinutes(5);
   }
   if (rating <= 4) {
-    return addDays(3);
+    // Rating ≤ 4 → 3 days = 15 minutes
+    return addMinutes(15);
   }
-  return addDays(7);
+  // Rating > 4 → 7 days = 35 minutes
+  return addMinutes(35);
 }
 
 function buildTimesReviewed(existingReview) {

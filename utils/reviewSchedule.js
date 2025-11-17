@@ -50,16 +50,20 @@ export function getNextReviewDate(difficulty, isCorrect) {
   const now = new Date();
   
   if (!isCorrect) {
-    now.setDate(now.getDate() + 1);
+    // Wrong answer → 1 day = 5 minutes
+    now.setMinutes(now.getMinutes() + 5);
     return now;
   }
   
   if (difficulty === "Easy") {
-    now.setDate(now.getDate() + 3);
+    // Easy → 3 days = 15 minutes
+    now.setMinutes(now.getMinutes() + 15);
   } else if (difficulty === "Medium") {
-    now.setDate(now.getDate() + 5);
+    // Medium → 5 days = 25 minutes
+    now.setMinutes(now.getMinutes() + 25);
   } else if (difficulty === "Hard") {
-    now.setDate(now.getDate() + 7);
+    // Hard → 7 days = 35 minutes
+    now.setMinutes(now.getMinutes() + 35);
   }
   
   return now;
