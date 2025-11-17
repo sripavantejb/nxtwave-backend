@@ -621,12 +621,16 @@ export async function submitRating(req, res) {
     // Get existing review data
     const existingReview = getUserReviewData(userId)[questionId];
     
-    // Store rating in reviewData (without nextReviewDate - will be set after follow-up answer)
+    // Calculate nextReviewDate based on rating (Easy→15min, Medium→25min, Hard→35min)
+    // This assumes the answer will be correct - if incorrect, it will be overridden in submitAnswer
+    const nextReviewDate = calculateNextReviewDate(true, difficultyLevel.toLowerCase());
+    
+    // Store rating in reviewData with nextReviewDate set based on rating
     // Don't increment timesReviewed yet - only after follow-up answer
     updateUserReviewData(userId, questionId, {
       difficulty: difficultyLevel.toLowerCase(),
       lastAnswerCorrect: null, // Not applicable for rating
-      nextReviewDate: null, // Will be set after follow-up answer
+      nextReviewDate: nextReviewDate.toISOString(), // Set based on rating (will be overridden if answer is incorrect)
       timesReviewed: existingReview ? existingReview.timesReviewed : 0 // Set to 0 for rating, will be set to 1 after answer
     });
     
@@ -733,7 +737,9 @@ export async function submitAnswer(req, res) {
       : actualDifficulty;
     
     // Calculate next review date using spaced repetition service
-    // This uses the flashcard rating difficulty (Easy/Medium/Hard) to determine review schedule
+    // If answer is incorrect → nextReview = now + 5 minutes (overrides rating-based schedule)
+    // If answer is correct → nextReview = now + (15/25/35 minutes based on rating difficulty)
+    // This overrides the nextReviewDate that was set in submitRating if the answer is incorrect
     const nextReviewDate = calculateNextReviewDate(result.correct, difficultyForReview);
     
     // Get existing review data
@@ -1194,7 +1200,8 @@ export async function getBatch(req, res) {
       }
     }
     
-    // Store batch IDs in user data
+    // Store batch IDs in user data and reset batch index to 0
+    // setCurrentBatchFlashcards also resets currentBatchIndex to 0
     const success = setCurrentBatchFlashcards(userId, batch.flashcardIds);
     
     if (!success) {

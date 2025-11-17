@@ -244,9 +244,13 @@ export function composeBatch(userId, batchSize = 6) {
   const newSubtopics = new Set();
   
   if (remainingSlots > 0) {
-    // Filter for new flashcards (never attempted, not scheduled for future, not in previous batches)
+    // Filter for new flashcards that:
+    // 1. Have never been attempted (no reviewData entry)
+    // 2. Are not in previous batches
+    // 3. Do not have a future scheduled time (nextReviewDate > now)
+    // 4. Are all unique (not already in selectedFlashcardIds)
     const newFlashcards = allFlashcards.filter(question => {
-      // Skip if already selected in this batch
+      // Skip if already selected in this batch (ensures uniqueness)
       if (selectedFlashcardIds.has(question.id)) {
         return false;
       }
@@ -258,24 +262,27 @@ export function composeBatch(userId, batchSize = 6) {
       
       const review = reviewData[question.id];
       
-      // Never attempted: no review data exists
+      // Never attempted: no review data exists at all
       if (!review) {
         return true;
       }
       
-      // If review exists, check if it's scheduled for future
-      // Exclude if scheduled for future (nextReviewDate > now)
+      // If review exists, it means the flashcard has been attempted before
+      // Check if it's scheduled for future - if so, exclude it
       if (review.nextReviewDate) {
         const nextReview = new Date(review.nextReviewDate);
         if (nextReview > now) {
-          // Scheduled for future - exclude
+          // Scheduled for future - exclude (not eligible yet)
           return false;
         }
+        // If nextReviewDate <= now, it should have been caught by getAllDueQuestions
+        // So if we reach here, it's an edge case - exclude to be safe
+        return false;
       }
       
-      // If review exists but no nextReviewDate or it's due, consider it eligible
-      // (This handles edge cases where review exists but might be eligible)
-      return true;
+      // If review exists but no nextReviewDate, it's an edge case
+      // Exclude it to ensure we only get truly never-attempted flashcards
+      return false;
     });
     
     // Shuffle and select up to remainingSlots new flashcards
