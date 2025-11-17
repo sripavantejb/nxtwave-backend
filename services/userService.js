@@ -369,6 +369,10 @@ export function startNewSession(userId, subtopics) {
     // Reset shown flashcards for new session (track which flashcards have been shown in this session)
     users[userId].reviewData.shownFlashcards = [];
     
+    // Clear batch completion time when starting a new session
+    // This ensures the timer resets properly for the next batch
+    delete users[userId].reviewData.batchCompletionTime;
+    
     // Reset completed subtopics for new session (or keep existing if you want to track all-time)
     // For now, we'll keep completedSubtopics as all-time tracking
     
@@ -487,6 +491,46 @@ export function updateSubtopicReviewDate(userId, subtopicName, nextReviewDate) {
 }
 
 /**
+ * Set batch completion time for a user
+ * @param {string} userId - User ID
+ * @param {number} timestamp - Batch completion timestamp (milliseconds since epoch)
+ * @returns {boolean} Success status
+ */
+export function setBatchCompletionTime(userId, timestamp) {
+  try {
+    const users = loadUsers();
+    
+    if (!users[userId]) {
+      console.error(`User ${userId} not found`);
+      return false;
+    }
+    
+    // Initialize reviewData if it doesn't exist
+    if (!users[userId].reviewData) {
+      users[userId].reviewData = {};
+    }
+    
+    // Store batch completion time
+    users[userId].reviewData.batchCompletionTime = timestamp;
+    
+    return saveUsers(users);
+  } catch (error) {
+    console.error('Error setting batch completion time:', error);
+    return false;
+  }
+}
+
+/**
+ * Get batch completion time for a user
+ * @param {string} userId - User ID
+ * @returns {number|null} Batch completion timestamp (milliseconds since epoch) or null if not set
+ */
+export function getBatchCompletionTime(userId) {
+  const reviewData = getUserReviewData(userId);
+  return reviewData.batchCompletionTime || null;
+}
+
+/**
  * Check if day shift has completed (nextReviewDate has passed)
  * Day shift = 5 minutes (for testing) or 1 day (for production)
  * @param {string} userId - User ID
@@ -496,9 +540,21 @@ export function isDayShiftCompleted(userId) {
   const reviewData = getUserReviewData(userId);
   const now = new Date();
   
-  // Check if there are any incorrectly answered flashcards that are due
-  // This indicates that a day shift has completed
-  const specialKeys = ['flashcardSubtopic', 'sessionSubtopics', 'completedSubtopics', 'shownFlashcards'];
+  // First, check if batchCompletionTime exists and if 5 minutes have passed since batch completion
+  const batchCompletionTime = getBatchCompletionTime(userId);
+  if (batchCompletionTime !== null) {
+    const batchCompletionDate = new Date(batchCompletionTime);
+    const dayShiftEndTime = new Date(batchCompletionDate.getTime() + (5 * 60 * 1000)); // Add 5 minutes
+    if (now >= dayShiftEndTime) {
+      return true;
+    }
+    // If batchCompletionTime exists but hasn't passed yet, return false
+    return false;
+  }
+  
+  // Fallback: Check if there are any incorrectly answered flashcards that are due
+  // This is for backward compatibility if batchCompletionTime doesn't exist
+  const specialKeys = ['flashcardSubtopic', 'sessionSubtopics', 'completedSubtopics', 'shownFlashcards', 'batchCompletionTime'];
   
   for (const [questionId, review] of Object.entries(reviewData)) {
     // Skip special keys

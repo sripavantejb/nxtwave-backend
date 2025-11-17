@@ -13,7 +13,8 @@ import {
   startSession,
   resetShownFlashcards,
   checkNewBatch,
-  createNewBatch
+  createNewBatch,
+  completeBatch
 } from '../controllers/flashcardController.js';
 import { optionalAuth, authenticateUser } from '../middleware/auth.js';
 
@@ -35,6 +36,7 @@ router.post('/question/submit', authenticateUser, submitAnswer);
 router.get('/next-question', authenticateUser, getNextQuestion);
 router.get('/due-reviews', authenticateUser, getDueReviews);
 router.post('/reset-shown', authenticateUser, resetShownFlashcards);
+router.post('/complete-batch', authenticateUser, completeBatch);
 router.get('/check-new-batch', authenticateUser, checkNewBatch);
 router.post('/create-new-batch', authenticateUser, createNewBatch);
 

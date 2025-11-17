@@ -18,7 +18,7 @@ import {
   composeBatch
 } from '../services/flashcardJsonService.js';
 import { updateReviewSchedule } from '../utils/reviewSchedule.js';
-import { updateUserReviewData, getUserReviewData, startNewSession, getSessionSubtopics, getCompletedSubtopics, isSubtopicDue, markSubtopicCompleted, updateSubtopicReviewDate, markFlashcardAsShown, getShownFlashcards, loadUsers, saveUsers, isDayShiftCompleted, getIncorrectlyAnsweredDueFlashcards } from '../services/userService.js';
+import { updateUserReviewData, getUserReviewData, startNewSession, getSessionSubtopics, getCompletedSubtopics, isSubtopicDue, markSubtopicCompleted, updateSubtopicReviewDate, markFlashcardAsShown, getShownFlashcards, loadUsers, saveUsers, isDayShiftCompleted, getIncorrectlyAnsweredDueFlashcards, setBatchCompletionTime } from '../services/userService.js';
 import { calculateNextReviewDate, getAllDueQuestions, getDueFlashcardSubtopics, calculateSubtopicNextReviewDate } from '../services/spacedRepService.js';
 
 let cachedTopicMap = null;
@@ -957,6 +957,44 @@ export async function checkNewBatch(req, res) {
   } catch (err) {
     console.error('Error checking new batch:', err);
     return res.status(500).json({ error: 'Failed to check new batch availability' });
+  }
+}
+
+/**
+ * POST /flashcards/complete-batch
+ * Stores the batch completion time when a batch of 6 flashcards is completed
+ * Requires JWT authentication
+ * Body: { timestamp: number } - timestamp in milliseconds since epoch
+ * Returns: { success: boolean, message?: string }
+ */
+export async function completeBatch(req, res) {
+  try {
+    const userId = req.userId; // Set by authenticateUser middleware (required)
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    const { timestamp } = req.body;
+    
+    if (!timestamp || typeof timestamp !== 'number') {
+      return res.status(400).json({ error: 'timestamp is required and must be a number' });
+    }
+    
+    // Store batch completion time
+    const success = setBatchCompletionTime(userId, timestamp);
+    
+    if (!success) {
+      return res.status(500).json({ error: 'Failed to store batch completion time' });
+    }
+    
+    return res.json({
+      success: true,
+      message: 'Batch completion time stored successfully'
+    });
+  } catch (err) {
+    console.error('Error storing batch completion time:', err);
+    return res.status(500).json({ error: 'Failed to store batch completion time' });
   }
 }
 
