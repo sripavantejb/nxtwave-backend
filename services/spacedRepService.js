@@ -1,18 +1,26 @@
 import { getUserReviewData, isSubtopicDue } from './userService.js';
 
 /**
- * Calculate next review date based on difficulty rating
- * Uses difficulty-based intervals regardless of correctness:
+ * Calculate next review date based on correctness and difficulty rating
+ * Priority: Incorrect answers → 5 minutes
+ * Correct answers → difficulty-based intervals:
  * Easy → 15 minutes, Medium → 25 minutes, Hard → 35 minutes
- * @param {boolean} isCorrect - Whether the answer was correct (kept for compatibility, not used)
+ * @param {boolean} isCorrect - Whether the answer was correct
  * @param {string} difficulty - Difficulty level ("easy", "medium", "hard" or "Easy", "Medium", "Hard")
  * @returns {Date} Next review date
  */
 export function calculateNextReviewDate(isCorrect, difficulty) {
   const now = new Date();
+  
+  // Priority check: If answer is incorrect, schedule for 5 minutes
+  if (isCorrect === false) {
+    now.setMinutes(now.getMinutes() + 5);
+    return now;
+  }
+  
+  // If correct, use difficulty-based scheduling
   const difficultyLower = String(difficulty || 'medium').toLowerCase();
-
-  // Schedule based on difficulty rating only (Easy/Medium/Hard)
+  
   // Easy → 15 minutes
   // Medium → 25 minutes
   // Hard → 35 minutes
@@ -126,18 +134,26 @@ export function getDueFlashcardSubtopics(userId) {
 }
 
 /**
- * Calculate next review date for flashcard subtopic based on difficulty rating
- * Uses difficulty-based intervals regardless of correctness:
+ * Calculate next review date for flashcard subtopic based on correctness and difficulty rating
+ * Priority: Incorrect answers → 5 minutes
+ * Correct answers → difficulty-based intervals:
  * Easy → 15 minutes, Medium → 25 minutes, Hard → 35 minutes
- * @param {boolean} isCorrect - Whether the follow-up answer was correct (kept for compatibility, not used)
+ * @param {boolean} isCorrect - Whether the follow-up answer was correct
  * @param {string} difficulty - Difficulty level from rating ("easy", "medium", "hard")
  * @returns {Date} Next review date
  */
 export function calculateSubtopicNextReviewDate(isCorrect, difficulty) {
   const now = new Date();
+  
+  // Priority check: If answer is incorrect, schedule for 5 minutes
+  if (isCorrect === false) {
+    now.setMinutes(now.getMinutes() + 5);
+    return now;
+  }
+  
+  // If correct, use difficulty-based scheduling
   const difficultyLower = String(difficulty || 'medium').toLowerCase();
 
-  // Schedule based on difficulty rating only (Easy/Medium/Hard)
   // Easy → 15 minutes
   // Medium → 25 minutes
   // Hard → 35 minutes

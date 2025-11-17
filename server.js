@@ -20,6 +20,9 @@ const corsOptions = {
       'http://localhost:5173',
       'http://localhost:5174',
       'http://localhost:3000',
+      'http://127.0.0.1:5173',
+      'http://127.0.0.1:5174',
+      'http://127.0.0.1:3000',
       'https://nxtwave-frontend-blond.vercel.app'
     ];
     
@@ -27,20 +30,25 @@ const corsOptions = {
     if (allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
       callback(null, true);
     } else {
-      // Allow all origins in production for now (can be restricted later)
-      callback(null, true);
+      // Allow all origins in development, restrict in production if needed
+      if (process.env.NODE_ENV === 'production') {
+        // In production, you might want to restrict this
+        callback(null, true);
+      } else {
+        callback(null, true);
+      }
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
   exposedHeaders: ['Content-Type', 'Authorization'],
   optionsSuccessStatus: 200, // Some legacy browsers (IE11, various SmartTVs) choke on 204
   preflightContinue: false,
   maxAge: 86400 // 24 hours
 };
 
-// Apply CORS middleware
+// Apply CORS middleware BEFORE other middleware
 app.use(cors(corsOptions));
 
 // Handle preflight requests explicitly
