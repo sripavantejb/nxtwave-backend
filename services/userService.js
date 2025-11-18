@@ -493,7 +493,7 @@ export function updateSubtopicReviewDate(userId, subtopicName, nextReviewDate) {
 /**
  * Set batch completion time for a user
  * @param {string} userId - User ID
- * @param {number} timestamp - Batch completion timestamp (milliseconds since epoch)
+ * @param {number|null} timestamp - Batch completion timestamp (milliseconds since epoch), or null to clear
  * @returns {boolean} Success status
  */
 export function setBatchCompletionTime(userId, timestamp) {
@@ -510,8 +510,14 @@ export function setBatchCompletionTime(userId, timestamp) {
       users[userId].reviewData = {};
     }
     
-    // Store batch completion time
-    users[userId].reviewData.batchCompletionTime = timestamp;
+    // Store or clear batch completion time
+    if (timestamp === null) {
+      // Clear the completion time
+      delete users[userId].reviewData.batchCompletionTime;
+    } else {
+      // Store the completion time
+      users[userId].reviewData.batchCompletionTime = timestamp;
+    }
     
     return saveUsers(users);
   } catch (error) {

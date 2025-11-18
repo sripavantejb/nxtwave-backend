@@ -1188,5 +1188,211 @@
       "shownFlashcards": []
     },
     "createdAt": "2025-11-17T16:38:43.747Z"
+  },
+  "user_1763402855238_oxi3if7dr": {
+    "reviewData": {
+      "currentBatchFlashcards": [
+        "num-e-9",
+        "num-m-9",
+        "tim-m-9",
+        "lcm-e-6",
+        "lcm-m-6",
+        "per-e-8"
+      ],
+      "currentBatchIndex": 0,
+      "sessionSubtopics": [
+        "Man Chain Rule and Wages",
+        "Remainder Cycle",
+        "Multiples",
+        "SI",
+        "Discount"
+      ],
+      "shownFlashcards": [
+        "tim-m-9",
+        "tim-m-7",
+        "num-m-9",
+        "lcm-e-6"
+      ],
+      "num-h-7": {
+        "difficulty": "hard",
+        "lastAnswerCorrect": true,
+        "nextReviewDate": "2025-11-17T18:45:51.100Z",
+        "timesReviewed": 1
+      },
+      "num-e-7": {
+        "difficulty": "hard",
+        "lastAnswerCorrect": true,
+        "nextReviewDate": "2025-11-17T18:45:51.100Z",
+        "timesReviewed": 1
+      },
+      "flashcardSubtopic": {
+        "Remainder Cycle": {
+          "nextReviewDate": "2025-11-17T18:16:10.394Z"
+        },
+        "Man Chain Rule and Wages": {
+          "nextReviewDate": "2025-11-17T18:46:05.276Z"
+        },
+        "Multiples": {
+          "nextReviewDate": "2025-11-17T18:16:15.658Z"
+        }
+      },
+      "completedSubtopics": [
+        "Remainder Cycle",
+        "Man Chain Rule and Wages",
+        "Multiples"
+      ],
+      "tim-m-9": {
+        "difficulty": "medium",
+        "lastAnswerCorrect": false,
+        "nextReviewDate": "2025-11-17T18:15:58.824Z",
+        "timesReviewed": 2
+      },
+      "tim-m-7": {
+        "difficulty": "hard",
+        "lastAnswerCorrect": true,
+        "nextReviewDate": "2025-11-17T18:46:05.274Z",
+        "timesReviewed": 1
+      },
+      "tim-h-7": {
+        "difficulty": "hard",
+        "lastAnswerCorrect": true,
+        "nextReviewDate": "2025-11-17T18:46:05.274Z",
+        "timesReviewed": 1
+      },
+      "num-m-9": {
+        "difficulty": "easy",
+        "lastAnswerCorrect": false,
+        "nextReviewDate": "2025-11-17T18:16:10.391Z",
+        "timesReviewed": 1
+      },
+      "num-e-9": {
+        "difficulty": "easy",
+        "lastAnswerCorrect": false,
+        "nextReviewDate": "2025-11-17T18:16:10.391Z",
+        "timesReviewed": 1
+      },
+      "lcm-e-6": {
+        "difficulty": "medium",
+        "lastAnswerCorrect": false,
+        "nextReviewDate": "2025-11-17T18:16:15.655Z",
+        "timesReviewed": 1
+      },
+      "lcm-m-6": {
+        "difficulty": "medium",
+        "lastAnswerCorrect": false,
+        "nextReviewDate": "2025-11-17T18:16:15.655Z",
+        "timesReviewed": 1
+      },
+      "previousBatchFlashcards": [
+        "tim-m-9",
+        "tim-m-7",
+        "num-m-9",
+        "lcm-e-6",
+        "si--e-1",
+        "pro-e-4"
+      ],
+      "batchCompletionTime": 1763403075661
+    }
+  },
+  "user_1763403470884_ahsi2soym": {
+    "name": "hafsa@",
+    "email": "hafsaa@gmail.com",
+    "passwordHash": "$2b$10$eS1UL008h.Z5/s2sawN27eiWBhA81uFiJVAKW.z3tiZvejKh0BC7.",
+    "reviewData": {
+      "currentBatchFlashcards": [
+        "age-h-2",
+        "mix-e-2",
+        "pro-m-5",
+        "pro-e-1",
+        "lcm-e-5",
+        "pro-h-5"
+      ],
+      "currentBatchIndex": 1,
+      "sessionSubtopics": [
+        "Ages",
+        "Mixtures and Allegations",
+        "Discount",
+        "Profit & Loss",
+        "Multiples"
+      ],
+      "shownFlashcards": [
+        "age-h-2"
+      ],
+      "tim-h-13": {
+        "difficulty": "easy",
+        "lastAnswerCorrect": false,
+        "nextReviewDate": "2025-11-17T18:23:10.587Z",
+        "timesReviewed": 1
+      },
+      "tim-e-13": {
+        "difficulty": "easy",
+        "lastAnswerCorrect": false,
+        "nextReviewDate": "2025-11-17T18:23:10.587Z",
+        "timesReviewed": 1
+      },
+      "flashcardSubtopic": {
+        "Races": {
+          "nextReviewDate": "2025-11-17T18:23:10.590Z"
+        },
+        "Factors": {
+          "nextReviewDate": "2025-11-17T18:23:23.187Z"
+        },
+        "CI": {
+          "nextReviewDate": "2025-11-17T18:23:28.864Z"
+        },
+        "Basics and Properties": {
+          "nextReviewDate": "2025-11-17T18:53:55.982Z"
+        }
+      },
+      "completedSubtopics": [
+        "Races",
+        "Factors",
+        "CI",
+        "Basics and Properties"
+      ],
+      "lcm-e-9": {
+        "difficulty": "easy",
+        "lastAnswerCorrect": false,
+        "nextReviewDate": "2025-11-17T18:23:17.299Z",
+        "timesReviewed": 2
+      },
+      "lcm-m-8": {
+        "difficulty": "easy",
+        "lastAnswerCorrect": false,
+        "nextReviewDate": "2025-11-17T18:23:23.184Z",
+        "timesReviewed": 1
+      },
+      "lcm-e-8": {
+        "difficulty": "easy",
+        "lastAnswerCorrect": false,
+        "nextReviewDate": "2025-11-17T18:23:23.184Z",
+        "timesReviewed": 1
+      },
+      "si--h-2": {
+        "difficulty": "easy",
+        "lastAnswerCorrect": false,
+        "nextReviewDate": "2025-11-17T18:23:28.861Z",
+        "timesReviewed": 1
+      },
+      "si--e-2": {
+        "difficulty": "easy",
+        "lastAnswerCorrect": false,
+        "nextReviewDate": "2025-11-17T18:23:28.861Z",
+        "timesReviewed": 1
+      },
+      "lcm-m-3": {
+        "difficulty": "hard",
+        "lastAnswerCorrect": true,
+        "nextReviewDate": "2025-11-17T18:53:55.973Z",
+        "timesReviewed": 1
+      },
+      "lcm-h-3": {
+        "difficulty": "hard",
+        "lastAnswerCorrect": true,
+        "nextReviewDate": "2025-11-17T18:53:55.973Z",
+        "timesReviewed": 1
+      }
+    },
+    "createdAt": "2025-11-17T18:17:50.885Z"
   }
 }

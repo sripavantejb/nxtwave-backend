@@ -1053,6 +1053,48 @@ export async function completeBatch(req, res) {
       return res.status(400).json({ error: 'timestamp is required and must be a number' });
     }
     
+    // STRICT VALIDATION: Check if there's already an active cooldown
+    const existingCompletionTime = getBatchCompletionTime(userId);
+    if (existingCompletionTime !== null) {
+      const now = Date.now();
+      const elapsed = now - existingCompletionTime;
+      const cooldownMs = 5 * 60 * 1000; // 5 minutes
+      
+      if (elapsed < cooldownMs) {
+        // Cooldown is still active - reject this request to prevent manipulation
+        const remainingSeconds = Math.ceil((cooldownMs - elapsed) / 1000);
+        const minutes = Math.floor(remainingSeconds / 60);
+        const seconds = remainingSeconds % 60;
+        const remainingTime = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        
+        return res.status(429).json({
+          error: 'Cooldown already active',
+          message: 'You cannot complete another batch while cooldown is active',
+          canStart: false,
+          remainingSeconds,
+          remainingTime
+        });
+      }
+    }
+    
+    // Validate timestamp is not in the future (prevent manipulation)
+    const now = Date.now();
+    if (timestamp > now + 1000) { // Allow 1 second tolerance for clock skew
+      return res.status(400).json({ 
+        error: 'Invalid timestamp',
+        message: 'Timestamp cannot be in the future'
+      });
+    }
+    
+    // Validate timestamp is not too old (prevent replay attacks)
+    const maxAge = 60 * 1000; // 60 seconds
+    if (now - timestamp > maxAge) {
+      return res.status(400).json({
+        error: 'Invalid timestamp',
+        message: 'Timestamp is too old. Please complete batch immediately after finishing.'
+      });
+    }
+    
     // Get current batch flashcard IDs
     const currentBatchFlashcards = getCurrentBatchFlashcards(userId);
     
@@ -1079,7 +1121,8 @@ export async function completeBatch(req, res) {
     
     return res.json({
       success: true,
-      message: 'Batch completion time stored successfully'
+      message: 'Batch completion time stored successfully',
+      cooldownSeconds: 300 // 5 minutes
     });
   } catch (err) {
     console.error('Error storing batch completion time:', err);
@@ -1207,6 +1250,10 @@ export async function getBatch(req, res) {
     if (!success) {
       return res.status(500).json({ error: 'Failed to store batch data' });
     }
+    
+    // IMPORTANT: Clear batchCompletionTime since cooldown has expired and new batch is starting
+    // This prevents the timer from showing old completion time
+    setBatchCompletionTime(userId, null);
     
     return res.json({
       flashcards,
