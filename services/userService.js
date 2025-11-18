@@ -369,9 +369,20 @@ export function startNewSession(userId, subtopics) {
     // Reset shown flashcards for new session (track which flashcards have been shown in this session)
     users[userId].reviewData.shownFlashcards = [];
     
-    // Clear batch completion time when starting a new session
-    // This ensures the timer resets properly for the next batch
-    delete users[userId].reviewData.batchCompletionTime;
+    // Only clear batch completion time if cooldown has expired (5 minutes have passed)
+    // This preserves active cooldown timers when starting a new session
+    const batchCompletionTime = users[userId].reviewData.batchCompletionTime;
+    if (batchCompletionTime !== undefined && batchCompletionTime !== null) {
+      const now = Date.now();
+      const elapsed = now - batchCompletionTime;
+      const cooldownMs = 5 * 60 * 1000; // 5 minutes
+      
+      // Only clear if cooldown has expired
+      if (elapsed >= cooldownMs) {
+        delete users[userId].reviewData.batchCompletionTime;
+      }
+      // If cooldown is still active, preserve batchCompletionTime
+    }
     
     // Reset completed subtopics for new session (or keep existing if you want to track all-time)
     // For now, we'll keep completedSubtopics as all-time tracking

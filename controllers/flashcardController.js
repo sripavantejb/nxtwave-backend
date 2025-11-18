@@ -403,6 +403,31 @@ export async function getRandomFlashcardJson(req, res) {
       }
     }
     
+    // Check cooldown before Priority 2 (session subtopics)
+    // Priority 1 (due reviews) bypasses cooldown as they're part of spaced repetition
+    const batchCompletionTime = getBatchCompletionTime(userId);
+    if (batchCompletionTime !== null) {
+      const now = Date.now();
+      const elapsed = now - batchCompletionTime;
+      const cooldownMs = 5 * 60 * 1000; // 5 minutes
+      
+      if (elapsed < cooldownMs) {
+        // Cooldown is still active - return error with cooldown info
+        const remainingSeconds = Math.ceil((cooldownMs - elapsed) / 1000);
+        const minutes = Math.floor(remainingSeconds / 60);
+        const seconds = remainingSeconds % 60;
+        const remainingTime = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        
+        return res.status(429).json({
+          error: 'Cooldown active',
+          message: 'Please wait for the cooldown timer to expire before loading new flashcards',
+          canStart: false,
+          remainingSeconds,
+          remainingTime
+        });
+      }
+    }
+    
     // Priority 2: Check for due flashcard subtopics
     const dueSubtopics = getDueFlashcardSubtopics(userId);
     const sessionSubtopics = getSessionSubtopics(userId);
