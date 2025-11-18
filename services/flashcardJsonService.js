@@ -221,6 +221,7 @@ export function composeBatch(userId, batchSize = 6) {
   const dueFlashcardIds = [];
   const dueSubtopics = new Set();
   const selectedFlashcardIds = new Set(); // Track selected IDs to ensure uniqueness
+  const selectedFlashcardTexts = new Set(); // Track selected flashcard texts to prevent duplicates
   
   // Special keys to skip when iterating reviewData (not applicable when checking by question.id)
   // But we'll use getAllDueQuestions which already handles this correctly
@@ -233,10 +234,15 @@ export function composeBatch(userId, batchSize = 6) {
   for (const question of allFlashcards) {
     // Check if this flashcard is due (in the due questions list)
     if (dueQuestionIdsSet.has(question.id)) {
-      // This flashcard is due - include it (past-due flashcards can repeat even if in previous/current batches)
-      if (!selectedFlashcardIds.has(question.id)) {
+      // Normalize flashcard text for comparison
+      const flashcardText = question.flashcard.trim().toLowerCase();
+      
+      // Check both ID and text uniqueness before adding
+      // Past-due flashcards can repeat even if in previous/current batches
+      if (!selectedFlashcardIds.has(question.id) && !selectedFlashcardTexts.has(flashcardText)) {
         dueFlashcardIds.push(question.id);
         selectedFlashcardIds.add(question.id);
+        selectedFlashcardTexts.add(flashcardText);
         if (question.subTopic && question.subTopic.trim() !== '') {
           dueSubtopics.add(question.subTopic.trim());
         }
@@ -257,10 +263,16 @@ export function composeBatch(userId, batchSize = 6) {
     // 1. Have never been attempted (no reviewData entry)
     // 2. Are not in previous batches
     // 3. Do not have a future scheduled time (nextReviewDate > now)
-    // 4. Are all unique (not already in selectedFlashcardIds)
+    // 4. Are all unique (not already in selectedFlashcardIds or selectedFlashcardTexts)
     const newFlashcards = allFlashcards.filter(question => {
       // Skip if already selected in this batch (ensures uniqueness)
       if (selectedFlashcardIds.has(question.id)) {
+        return false;
+      }
+      
+      // Skip if flashcard text already selected (prevents duplicates)
+      const flashcardText = question.flashcard.trim().toLowerCase();
+      if (selectedFlashcardTexts.has(flashcardText)) {
         return false;
       }
       
@@ -300,10 +312,14 @@ export function composeBatch(userId, batchSize = 6) {
     
     for (const question of selectedNew) {
       if (!selectedFlashcardIds.has(question.id)) {
-        newFlashcardIds.push(question.id);
-        selectedFlashcardIds.add(question.id);
-        if (question.subTopic && question.subTopic.trim() !== '') {
-          newSubtopics.add(question.subTopic.trim());
+        const flashcardText = question.flashcard.trim().toLowerCase();
+        if (!selectedFlashcardTexts.has(flashcardText)) {
+          newFlashcardIds.push(question.id);
+          selectedFlashcardIds.add(question.id);
+          selectedFlashcardTexts.add(flashcardText);
+          if (question.subTopic && question.subTopic.trim() !== '') {
+            newSubtopics.add(question.subTopic.trim());
+          }
         }
       }
     }
