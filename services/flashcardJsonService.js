@@ -181,7 +181,7 @@ export function getRandomFlashcard(userId = null, allowedSubtopics = null) {
  */
 export function mapRatingToDifficulty(rating) {
   if (rating <= 2) return "Easy";
-  if (rating <= 4) return "Medium";
+  if (rating <= 3) return "Medium";
   return "Hard";
 }
 
