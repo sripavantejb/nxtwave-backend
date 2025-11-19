@@ -416,6 +416,39 @@ export async function getRandomFlashcardJson(req, res) {
         }
       }
       
+      // First, scan the ENTIRE remaining batch array to find and mark all duplicates
+      // This ensures we catch duplicates even if they appear later in the batch
+      // We'll track which IDs and texts we've seen, and mark later occurrences as duplicates
+      const seenInBatchIds = new Set();
+      const seenInBatchTexts = new Set();
+      const batchDuplicateIds = new Set();
+      const batchDuplicateTexts = new Set();
+      
+      // Scan from currentBatchIndex onwards to find duplicates
+      for (let i = currentBatchIndex; i < currentBatchFlashcards.length; i++) {
+        const checkId = currentBatchFlashcards[i];
+        const checkQuestion = data.questions.find(q => q.id === checkId);
+        
+        if (checkQuestion && checkQuestion.flashcard) {
+          const checkNormalizedText = checkQuestion.flashcard.trim().toLowerCase().replace(/\s+/g, ' ');
+          
+          // If we've already seen this ID in the remaining batch, mark it as duplicate
+          if (seenInBatchIds.has(checkId)) {
+            batchDuplicateIds.add(checkId);
+          } else {
+            seenInBatchIds.add(checkId);
+          }
+          
+          // If we've already seen this text in the remaining batch, mark it as duplicate
+          if (seenInBatchTexts.has(checkNormalizedText)) {
+            batchDuplicateIds.add(checkId); // Mark this ID as duplicate
+            batchDuplicateTexts.add(checkNormalizedText);
+          } else {
+            seenInBatchTexts.add(checkNormalizedText);
+          }
+        }
+      }
+      
       // Find next flashcard in batch that hasn't been shown in session/today AND hasn't been served from this batch
       let flashcardData = null;
       let nextIndex = currentBatchIndex;
@@ -431,14 +464,26 @@ export async function getRandomFlashcardJson(req, res) {
             continue; // Skip this one, try next
           }
           
-          // Second check: Skip if already shown in session or today by ID
+          // Second check: Skip if this ID is a duplicate in the batch array
+          if (batchDuplicateIds.has(flashcardId)) {
+            nextIndex++;
+            continue; // Skip duplicate, try next
+          }
+          
+          // Third check: Skip if already shown in session or today by ID
           if (shownSet.has(flashcardId)) {
             nextIndex++;
             continue; // Skip this one, try next
           }
           
-          // Third check: Check for text-based duplicates
+          // Fourth check: Check for text-based duplicates
           const normalizedText = question.flashcard.trim().toLowerCase().replace(/\s+/g, ' ');
+          
+          // Skip if this text is a duplicate in the batch array
+          if (batchDuplicateTexts.has(normalizedText)) {
+            nextIndex++;
+            continue; // Skip duplicate text, try next
+          }
           
           // Skip if already shown in session or today by text (normalized)
           if (shownFlashcardTexts.has(normalizedText)) {
