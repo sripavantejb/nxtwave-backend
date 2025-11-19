@@ -274,6 +274,20 @@ export function composeBatch(userId, batchSize = 6) {
   const dailyShownFlashcardIds = getDailyShownFlashcards(userId);
   const shownSet = new Set([...shownFlashcardIds, ...dailyShownFlashcardIds]);
   
+  // Build set of normalized flashcard texts from already shown flashcards (session + daily)
+  // This prevents text-based duplicates in the batch
+  const shownFlashcardTexts = new Set();
+  const shownIds = new Set([...shownFlashcardIds, ...dailyShownFlashcardIds]);
+  for (const q of allFlashcards) {
+    if (shownIds.has(q.id) && q.flashcard) {
+      const normalizedText = q.flashcard.trim().toLowerCase().replace(/\s+/g, ' ');
+      shownFlashcardTexts.add(normalizedText);
+    }
+  }
+  
+  // Track normalized texts of flashcards already selected in this batch composition
+  const selectedFlashcardTexts = new Set();
+  
   // Special keys to skip when iterating reviewData (not applicable when checking by question.id)
   // But we'll use getAllDueQuestions which already handles this correctly
   const allDueQuestionIds = getAllDueQuestions(userId);
@@ -282,6 +296,7 @@ export function composeBatch(userId, batchSize = 6) {
   // Find all past-due flashcards (both incorrect and correct)
   // Use the flashcard questions that are in the due questions list
   // Exclude flashcards already shown in current session or today to prevent duplicates
+  // Also exclude flashcards with duplicate text (text-based duplicate detection)
   for (const question of allFlashcards) {
     // Check if this flashcard is due (in the due questions list)
     if (dueQuestionIdsSet.has(question.id)) {
@@ -293,10 +308,27 @@ export function composeBatch(userId, batchSize = 6) {
       // Check ID uniqueness before adding
       // Only add if not already selected in this batch composition
       if (!selectedFlashcardIds.has(question.id)) {
-        dueFlashcardIds.push(question.id);
-        selectedFlashcardIds.add(question.id);
-        if (question.subTopic && question.subTopic.trim() !== '') {
-          dueSubtopics.add(question.subTopic.trim());
+        // Check for text-based duplicates
+        if (question.flashcard) {
+          const normalizedText = question.flashcard.trim().toLowerCase().replace(/\s+/g, ' ');
+          
+          // Skip if this text was already shown (session or daily)
+          if (shownFlashcardTexts.has(normalizedText)) {
+            continue;
+          }
+          
+          // Skip if this text was already selected in this batch
+          if (selectedFlashcardTexts.has(normalizedText)) {
+            continue;
+          }
+          
+          // This flashcard is unique by both ID and text - add it
+          dueFlashcardIds.push(question.id);
+          selectedFlashcardIds.add(question.id);
+          selectedFlashcardTexts.add(normalizedText);
+          if (question.subTopic && question.subTopic.trim() !== '') {
+            dueSubtopics.add(question.subTopic.trim());
+          }
         }
       }
     }
@@ -316,6 +348,7 @@ export function composeBatch(userId, batchSize = 6) {
     // 2. Are not in previous batches
     // 3. Do not have a future scheduled time (nextReviewDate > now)
     // 4. Are all unique (not already in selectedFlashcardIds)
+    // 5. Do not have duplicate text (text-based duplicate detection)
     const newFlashcards = allFlashcards.filter(question => {
       // Skip if already selected in this batch (ensures uniqueness)
       if (selectedFlashcardIds.has(question.id)) {
@@ -325,6 +358,26 @@ export function composeBatch(userId, batchSize = 6) {
       // Skip if in previous batches or current batch (for new flashcards only, past-due can repeat)
       if (excludedBatchSet.has(question.id)) {
         return false;
+      }
+      
+      // Skip if already shown in current session or today
+      if (shownSet.has(question.id)) {
+        return false;
+      }
+      
+      // Check for text-based duplicates
+      if (question.flashcard) {
+        const normalizedText = question.flashcard.trim().toLowerCase().replace(/\s+/g, ' ');
+        
+        // Skip if this text was already shown (session or daily)
+        if (shownFlashcardTexts.has(normalizedText)) {
+          return false;
+        }
+        
+        // Skip if this text was already selected in this batch
+        if (selectedFlashcardTexts.has(normalizedText)) {
+          return false;
+        }
       }
       
       const review = reviewData[question.id];
@@ -358,6 +411,19 @@ export function composeBatch(userId, batchSize = 6) {
     
     for (const question of selectedNew) {
       if (!selectedFlashcardIds.has(question.id)) {
+        // Check for text-based duplicates one more time before adding
+        if (question.flashcard) {
+          const normalizedText = question.flashcard.trim().toLowerCase().replace(/\s+/g, ' ');
+          
+          // Skip if this text was already selected in this batch
+          if (selectedFlashcardTexts.has(normalizedText)) {
+            continue;
+          }
+          
+          // Add to tracking sets
+          selectedFlashcardTexts.add(normalizedText);
+        }
+        
         newFlashcardIds.push(question.id);
         selectedFlashcardIds.add(question.id);
         if (question.subTopic && question.subTopic.trim() !== '') {
@@ -371,10 +437,11 @@ export function composeBatch(userId, batchSize = 6) {
   const allFlashcardIds = [...limitedDueFlashcardIds, ...newFlashcardIds];
   const allSubtopics = Array.from(new Set([...dueSubtopics, ...newSubtopics]));
   
-  // Final deduplication: Remove duplicates by flashcard ID
-  // This ensures no duplicate flashcard IDs appear in the batch
+  // Final deduplication: Remove duplicates by flashcard ID and text
+  // This ensures no duplicate flashcard IDs or texts appear in the batch
   const deduplicatedFlashcardIds = [];
   const seenIds = new Set();
+  const seenTexts = new Set();
   
   for (const flashcardId of allFlashcardIds) {
     const question = allFlashcards.find(q => q.id === flashcardId);
@@ -385,9 +452,16 @@ export function composeBatch(userId, batchSize = 6) {
       continue;
     }
     
-    // This flashcard is unique - add it
+    // Check for text-based duplicates
+    const normalizedText = question.flashcard.trim().toLowerCase().replace(/\s+/g, ' ');
+    if (seenTexts.has(normalizedText)) {
+      continue; // Skip duplicate text
+    }
+    
+    // This flashcard is unique by both ID and text - add it
     deduplicatedFlashcardIds.push(flashcardId);
     seenIds.add(flashcardId);
+    seenTexts.add(normalizedText);
     
     // Stop if we've reached batch size
     if (deduplicatedFlashcardIds.length >= batchSize) {
@@ -412,6 +486,21 @@ export function composeBatch(userId, batchSize = 6) {
       // Skip if in previous batches (for new flashcards)
       if (excludedBatchSet.has(question.id)) continue;
       
+      // Check for text-based duplicates
+      if (question.flashcard) {
+        const normalizedText = question.flashcard.trim().toLowerCase().replace(/\s+/g, ' ');
+        
+        // Skip if this text was already shown (session or daily)
+        if (shownFlashcardTexts.has(normalizedText)) {
+          continue;
+        }
+        
+        // Skip if this text was already selected in this batch
+        if (seenTexts.has(normalizedText)) {
+          continue;
+        }
+      }
+      
       // Check if it's a new flashcard (not in reviewData) or due
       const review = reviewData[question.id];
       const isNew = !review;
@@ -419,8 +508,12 @@ export function composeBatch(userId, batchSize = 6) {
       
       // Only include if it's new or due (not scheduled for future)
       if (isNew || isDue) {
+        const normalizedText = question.flashcard ? question.flashcard.trim().toLowerCase().replace(/\s+/g, ' ') : '';
         deduplicatedFlashcardIds.push(question.id);
         seenIds.add(question.id);
+        if (normalizedText) {
+          seenTexts.add(normalizedText);
+        }
         if (question.subTopic && question.subTopic.trim() !== '') {
           allSubtopics.push(question.subTopic.trim());
         }

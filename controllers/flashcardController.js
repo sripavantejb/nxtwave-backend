@@ -385,20 +385,21 @@ export async function getRandomFlashcardJson(req, res) {
         return res.json({ allCompleted: true, message: 'Batch completed', sessionSubtopics: [] });
       }
       
-      // Get flashcards already shown today to prevent duplicates
+      // Get flashcards already shown in this session and today to prevent duplicates
+      const shownFlashcardIds = getShownFlashcards(userId);
       const dailyShownFlashcardIds = getDailyShownFlashcards(userId);
-      const dailyShownSet = new Set(dailyShownFlashcardIds);
+      const shownSet = new Set([...shownFlashcardIds, ...dailyShownFlashcardIds]);
       
-      // Build set of normalized texts of already shown flashcards today
+      // Build set of normalized texts of already shown flashcards (session + daily)
       const data = loadQuestions();
       const allQuestionsWithFlashcards = data.questions.filter(
         q => q.flashcard && q.flashcard.trim() !== ''
       );
-      const dailyShownFlashcardTexts = new Set();
+      const shownFlashcardTexts = new Set();
       for (const q of allQuestionsWithFlashcards) {
-        if (dailyShownSet.has(q.id) && q.flashcard) {
+        if (shownSet.has(q.id) && q.flashcard) {
           const normalizedText = q.flashcard.trim().toLowerCase().replace(/\s+/g, ' ');
-          dailyShownFlashcardTexts.add(normalizedText);
+          shownFlashcardTexts.add(normalizedText);
         }
       }
       
@@ -413,7 +414,7 @@ export async function getRandomFlashcardJson(req, res) {
         }
       }
       
-      // Find next flashcard in batch that hasn't been shown today AND hasn't been served from this batch
+      // Find next flashcard in batch that hasn't been shown in session/today AND hasn't been served from this batch
       let flashcardData = null;
       let nextIndex = currentBatchIndex;
       
@@ -422,15 +423,15 @@ export async function getRandomFlashcardJson(req, res) {
         const question = data.questions.find(q => q.id === flashcardId);
         
         if (question && question.flashcard && question.flashcard.trim() !== '') {
-          // Check if already shown today by ID
-          if (dailyShownSet.has(flashcardId)) {
+          // Check if already shown in session or today by ID
+          if (shownSet.has(flashcardId)) {
             nextIndex++;
             continue; // Skip this one, try next
           }
           
-          // Check if already shown today by text (normalized)
+          // Check if already shown in session or today by text (normalized)
           const normalizedText = question.flashcard.trim().toLowerCase().replace(/\s+/g, ' ');
-          if (dailyShownFlashcardTexts.has(normalizedText)) {
+          if (shownFlashcardTexts.has(normalizedText)) {
             nextIndex++;
             continue; // Skip this one, try next
           }
