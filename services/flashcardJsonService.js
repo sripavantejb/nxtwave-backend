@@ -522,7 +522,33 @@ export function composeBatch(userId, batchSize = 6) {
   }
   
   // Ensure exactly batchSize flashcard IDs (or fewer if not enough unique flashcards available)
-  const finalFlashcardIds = deduplicatedFlashcardIds.slice(0, batchSize);
+  // Final safety check: Remove any remaining duplicates by ID or text
+  const finalFlashcardIds = [];
+  const finalSeenIds = new Set();
+  const finalSeenTexts = new Set();
+  
+  for (const flashcardId of deduplicatedFlashcardIds) {
+    if (finalFlashcardIds.length >= batchSize) break;
+    
+    const question = allFlashcards.find(q => q.id === flashcardId);
+    if (!question || !question.flashcard) continue;
+    
+    // Skip if we've already seen this ID
+    if (finalSeenIds.has(flashcardId)) {
+      continue;
+    }
+    
+    // Skip if we've already seen this text
+    const normalizedText = question.flashcard.trim().toLowerCase().replace(/\s+/g, ' ');
+    if (finalSeenTexts.has(normalizedText)) {
+      continue;
+    }
+    
+    // This flashcard is unique - add it
+    finalFlashcardIds.push(flashcardId);
+    finalSeenIds.add(flashcardId);
+    finalSeenTexts.add(normalizedText);
+  }
   
   return {
     flashcardIds: finalFlashcardIds,

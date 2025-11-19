@@ -403,10 +403,12 @@ export async function getRandomFlashcardJson(req, res) {
         }
       }
       
-      // Build set of flashcard texts already served from THIS batch (prevent duplicates within batch)
+      // Build set of flashcard IDs and texts already served from THIS batch (prevent duplicates within batch)
+      const batchServedIds = new Set();
       const batchServedTexts = new Set();
       for (let i = 0; i < currentBatchIndex; i++) {
         const servedId = currentBatchFlashcards[i];
+        batchServedIds.add(servedId); // Track served IDs
         const servedQuestion = data.questions.find(q => q.id === servedId);
         if (servedQuestion && servedQuestion.flashcard) {
           const normalizedText = servedQuestion.flashcard.trim().toLowerCase().replace(/\s+/g, ' ');
@@ -423,26 +425,38 @@ export async function getRandomFlashcardJson(req, res) {
         const question = data.questions.find(q => q.id === flashcardId);
         
         if (question && question.flashcard && question.flashcard.trim() !== '') {
-          // Check if already shown in session or today by ID
+          // First check: Skip if this ID was already served from THIS batch
+          if (batchServedIds.has(flashcardId)) {
+            nextIndex++;
+            continue; // Skip this one, try next
+          }
+          
+          // Second check: Skip if already shown in session or today by ID
           if (shownSet.has(flashcardId)) {
             nextIndex++;
             continue; // Skip this one, try next
           }
           
-          // Check if already shown in session or today by text (normalized)
+          // Third check: Check for text-based duplicates
           const normalizedText = question.flashcard.trim().toLowerCase().replace(/\s+/g, ' ');
+          
+          // Skip if already shown in session or today by text (normalized)
           if (shownFlashcardTexts.has(normalizedText)) {
             nextIndex++;
             continue; // Skip this one, try next
           }
           
-          // Check if this flashcard text was already served from THIS batch
+          // Skip if this flashcard text was already served from THIS batch
           if (batchServedTexts.has(normalizedText)) {
             nextIndex++;
             continue; // Skip this one, try next (duplicate within batch)
           }
           
           // This flashcard is valid - use it
+          // Immediately add to tracking sets to prevent serving it again
+          batchServedIds.add(flashcardId);
+          batchServedTexts.add(normalizedText);
+          
           const topic = data.topics.find(t => t.id === question.topicId);
           flashcardData = {
             questionId: question.id,
