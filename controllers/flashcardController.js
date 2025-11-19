@@ -18,7 +18,7 @@ import {
   composeBatch
 } from '../services/flashcardJsonService.js';
 import { updateReviewSchedule } from '../utils/reviewSchedule.js';
-import { updateUserReviewData, getUserReviewData, startNewSession, getSessionSubtopics, getCompletedSubtopics, isSubtopicDue, markSubtopicCompleted, updateSubtopicReviewDate, markFlashcardAsShown, getShownFlashcards, loadUsers, saveUsers, isDayShiftCompleted, getIncorrectlyAnsweredDueFlashcards, setBatchCompletionTime, getCurrentBatchFlashcards, getPreviousBatchFlashcards, setCurrentBatchFlashcards, addToPreviousBatches, clearCurrentBatch, getBatchCompletionTime, getCurrentBatchIndex, incrementCurrentBatchIndex, markFlashcardAsShownToday } from '../services/userService.js';
+import { updateUserReviewData, getUserReviewData, startNewSession, getSessionSubtopics, getCompletedSubtopics, isSubtopicDue, markSubtopicCompleted, updateSubtopicReviewDate, markFlashcardAsShown, getShownFlashcards, loadUsers, saveUsers, isDayShiftCompleted, getIncorrectlyAnsweredDueFlashcards, setBatchCompletionTime, getCurrentBatchFlashcards, getPreviousBatchFlashcards, setCurrentBatchFlashcards, addToPreviousBatches, clearCurrentBatch, getBatchCompletionTime, getCurrentBatchIndex, incrementCurrentBatchIndex, markFlashcardAsShownToday, getDailyShownFlashcards } from '../services/userService.js';
 import { calculateNextReviewDate, getAllDueQuestions, getDueFlashcardSubtopics, calculateSubtopicNextReviewDate } from '../services/spacedRepService.js';
 
 let cachedTopicMap = null;
@@ -377,9 +377,38 @@ export async function getRandomFlashcardJson(req, res) {
     const dueQuestionIds = getAllDueQuestions(userId);
     if (dueQuestionIds.length > 0) {
       const data = loadQuestions();
-      const questionsWithFlashcards = data.questions.filter(
-        q => q.flashcard && q.flashcard.trim() !== '' && dueQuestionIds.includes(q.id)
+      
+      // Get flashcards already shown in this session and today
+      const shownFlashcardIds = getShownFlashcards(userId);
+      const dailyShownFlashcardIds = getDailyShownFlashcards(userId);
+      const shownSet = new Set([...shownFlashcardIds, ...dailyShownFlashcardIds]);
+      
+      // Build set of normalized texts of already shown flashcards
+      const shownFlashcardTexts = new Set();
+      const allQuestionsWithFlashcards = data.questions.filter(
+        q => q.flashcard && q.flashcard.trim() !== ''
       );
+      for (const q of allQuestionsWithFlashcards) {
+        if (shownSet.has(q.id) && q.flashcard) {
+          const normalizedText = q.flashcard.trim().toLowerCase().replace(/\s+/g, ' ');
+          shownFlashcardTexts.add(normalizedText);
+        }
+      }
+      
+      // Filter due flashcards, excluding already shown ones
+      let questionsWithFlashcards = data.questions.filter(q => {
+        if (!q.flashcard || q.flashcard.trim() === '') return false;
+        if (!dueQuestionIds.includes(q.id)) return false;
+        
+        // Skip if already shown by ID
+        if (shownSet.has(q.id)) return false;
+        
+        // Skip if already shown by text (normalized)
+        const normalizedText = q.flashcard.trim().toLowerCase().replace(/\s+/g, ' ');
+        if (shownFlashcardTexts.has(normalizedText)) return false;
+        
+        return true;
+      });
       
       if (questionsWithFlashcards.length > 0) {
         const randomIndex = Math.floor(Math.random() * questionsWithFlashcards.length);
