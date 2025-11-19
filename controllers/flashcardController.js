@@ -402,7 +402,18 @@ export async function getRandomFlashcardJson(req, res) {
         }
       }
       
-      // Find next flashcard in batch that hasn't been shown today
+      // Build set of flashcard texts already served from THIS batch (prevent duplicates within batch)
+      const batchServedTexts = new Set();
+      for (let i = 0; i < currentBatchIndex; i++) {
+        const servedId = currentBatchFlashcards[i];
+        const servedQuestion = data.questions.find(q => q.id === servedId);
+        if (servedQuestion && servedQuestion.flashcard) {
+          const normalizedText = servedQuestion.flashcard.trim().toLowerCase().replace(/\s+/g, ' ');
+          batchServedTexts.add(normalizedText);
+        }
+      }
+      
+      // Find next flashcard in batch that hasn't been shown today AND hasn't been served from this batch
       let flashcardData = null;
       let nextIndex = currentBatchIndex;
       
@@ -422,6 +433,12 @@ export async function getRandomFlashcardJson(req, res) {
           if (dailyShownFlashcardTexts.has(normalizedText)) {
             nextIndex++;
             continue; // Skip this one, try next
+          }
+          
+          // Check if this flashcard text was already served from THIS batch
+          if (batchServedTexts.has(normalizedText)) {
+            nextIndex++;
+            continue; // Skip this one, try next (duplicate within batch)
           }
           
           // This flashcard is valid - use it
