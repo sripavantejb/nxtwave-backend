@@ -268,21 +268,11 @@ export function composeBatch(userId, batchSize = 6) {
   const dueFlashcardIds = [];
   const dueSubtopics = new Set();
   const selectedFlashcardIds = new Set(); // Track selected IDs to ensure uniqueness
-  const selectedFlashcardTexts = new Set(); // Track selected flashcard texts to prevent duplicates
   
   // Get flashcards already shown in this session and today
   const shownFlashcardIds = getShownFlashcards(userId);
   const dailyShownFlashcardIds = getDailyShownFlashcards(userId);
   const shownSet = new Set([...shownFlashcardIds, ...dailyShownFlashcardIds]);
-  
-  // Build set of normalized texts of already shown flashcards
-  const shownFlashcardTexts = new Set();
-  for (const q of allFlashcards) {
-    if (shownSet.has(q.id) && q.flashcard) {
-      const normalizedText = q.flashcard.trim().toLowerCase().replace(/\s+/g, ' ');
-      shownFlashcardTexts.add(normalizedText);
-    }
-  }
   
   // Special keys to skip when iterating reviewData (not applicable when checking by question.id)
   // But we'll use getAllDueQuestions which already handles this correctly
@@ -300,20 +290,11 @@ export function composeBatch(userId, batchSize = 6) {
         continue;
       }
       
-      // Normalize flashcard text for comparison
-      const flashcardText = question.flashcard.trim().toLowerCase().replace(/\s+/g, ' ');
-      
-      // Skip if flashcard text already shown (prevents text-based duplicates)
-      if (shownFlashcardTexts.has(flashcardText)) {
-        continue;
-      }
-      
-      // Check both ID and text uniqueness before adding
+      // Check ID uniqueness before adding
       // Only add if not already selected in this batch composition
-      if (!selectedFlashcardIds.has(question.id) && !selectedFlashcardTexts.has(flashcardText)) {
+      if (!selectedFlashcardIds.has(question.id)) {
         dueFlashcardIds.push(question.id);
         selectedFlashcardIds.add(question.id);
-        selectedFlashcardTexts.add(flashcardText);
         if (question.subTopic && question.subTopic.trim() !== '') {
           dueSubtopics.add(question.subTopic.trim());
         }
@@ -334,16 +315,10 @@ export function composeBatch(userId, batchSize = 6) {
     // 1. Have never been attempted (no reviewData entry)
     // 2. Are not in previous batches
     // 3. Do not have a future scheduled time (nextReviewDate > now)
-    // 4. Are all unique (not already in selectedFlashcardIds or selectedFlashcardTexts)
+    // 4. Are all unique (not already in selectedFlashcardIds)
     const newFlashcards = allFlashcards.filter(question => {
       // Skip if already selected in this batch (ensures uniqueness)
       if (selectedFlashcardIds.has(question.id)) {
-        return false;
-      }
-      
-      // Skip if flashcard text already selected (prevents duplicates)
-      const flashcardText = question.flashcard.trim().toLowerCase();
-      if (selectedFlashcardTexts.has(flashcardText)) {
         return false;
       }
       
@@ -383,14 +358,10 @@ export function composeBatch(userId, batchSize = 6) {
     
     for (const question of selectedNew) {
       if (!selectedFlashcardIds.has(question.id)) {
-        const flashcardText = question.flashcard.trim().toLowerCase();
-        if (!selectedFlashcardTexts.has(flashcardText)) {
-          newFlashcardIds.push(question.id);
-          selectedFlashcardIds.add(question.id);
-          selectedFlashcardTexts.add(flashcardText);
-          if (question.subTopic && question.subTopic.trim() !== '') {
-            newSubtopics.add(question.subTopic.trim());
-          }
+        newFlashcardIds.push(question.id);
+        selectedFlashcardIds.add(question.id);
+        if (question.subTopic && question.subTopic.trim() !== '') {
+          newSubtopics.add(question.subTopic.trim());
         }
       }
     }
@@ -400,33 +371,23 @@ export function composeBatch(userId, batchSize = 6) {
   const allFlashcardIds = [...limitedDueFlashcardIds, ...newFlashcardIds];
   const allSubtopics = Array.from(new Set([...dueSubtopics, ...newSubtopics]));
   
-  // Final deduplication: Remove duplicates by normalized flashcard text
-  // This ensures no duplicate flashcard texts appear in the batch, even if they have different IDs
+  // Final deduplication: Remove duplicates by flashcard ID
+  // This ensures no duplicate flashcard IDs appear in the batch
   const deduplicatedFlashcardIds = [];
-  const seenTexts = new Set();
   const seenIds = new Set();
   
   for (const flashcardId of allFlashcardIds) {
     const question = allFlashcards.find(q => q.id === flashcardId);
     if (!question || !question.flashcard) continue;
     
-    // Normalize flashcard text for comparison
-    const normalizedText = question.flashcard.trim().toLowerCase().replace(/\s+/g, ' ');
-    
     // Skip if we've already seen this ID (shouldn't happen, but safety check)
     if (seenIds.has(flashcardId)) {
-      continue;
-    }
-    
-    // Skip if we've already seen this flashcard text (prevents text-based duplicates)
-    if (seenTexts.has(normalizedText)) {
       continue;
     }
     
     // This flashcard is unique - add it
     deduplicatedFlashcardIds.push(flashcardId);
     seenIds.add(flashcardId);
-    seenTexts.add(normalizedText);
     
     // Stop if we've reached batch size
     if (deduplicatedFlashcardIds.length >= batchSize) {
@@ -445,17 +406,8 @@ export function composeBatch(userId, batchSize = 6) {
       // Skip if already in batch
       if (seenIds.has(question.id)) continue;
       
-      // Normalize flashcard text
-      const normalizedText = question.flashcard.trim().toLowerCase().replace(/\s+/g, ' ');
-      
-      // Skip if flashcard text already in batch
-      if (seenTexts.has(normalizedText)) continue;
-      
       // Skip if already shown today or in session
       if (shownSet.has(question.id)) continue;
-      
-      // Skip if flashcard text already shown
-      if (shownFlashcardTexts.has(normalizedText)) continue;
       
       // Skip if in previous batches (for new flashcards)
       if (excludedBatchSet.has(question.id)) continue;
@@ -469,7 +421,6 @@ export function composeBatch(userId, batchSize = 6) {
       if (isNew || isDue) {
         deduplicatedFlashcardIds.push(question.id);
         seenIds.add(question.id);
-        seenTexts.add(normalizedText);
         if (question.subTopic && question.subTopic.trim() !== '') {
           allSubtopics.push(question.subTopic.trim());
         }
