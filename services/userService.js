@@ -788,3 +788,86 @@ export function incrementCurrentBatchIndex(userId) {
     return false;
   }
 }
+
+/**
+ * Get the current date string in YYYY-MM-DD format
+ * @returns {string} Current date string
+ */
+function getCurrentDateString() {
+  const now = new Date();
+  return now.toISOString().split('T')[0]; // Returns YYYY-MM-DD
+}
+
+/**
+ * Get daily shown flashcard IDs for a user
+ * Resets automatically if the date has changed
+ * @param {string} userId - User ID
+ * @returns {Array<string>} Array of flashcard question IDs shown today
+ */
+export function getDailyShownFlashcards(userId) {
+  try {
+    const reviewData = getUserReviewData(userId);
+    const dailyData = reviewData.dailyShownFlashcards || {};
+    const today = getCurrentDateString();
+    
+    // If the date has changed, return empty array (data will be reset on next mark)
+    if (dailyData.date !== today) {
+      return [];
+    }
+    
+    return dailyData.flashcardIds || [];
+  } catch (error) {
+    console.error('Error getting daily shown flashcards:', error);
+    return [];
+  }
+}
+
+/**
+ * Mark a flashcard as shown today for a user
+ * Automatically resets if the date has changed
+ * @param {string} userId - User ID
+ * @param {string} questionId - Question ID of the flashcard shown
+ * @returns {boolean} Success status
+ */
+export function markFlashcardAsShownToday(userId, questionId) {
+  try {
+    const users = loadUsers();
+    
+    if (!users[userId]) {
+      console.error(`User ${userId} not found`);
+      return false;
+    }
+    
+    // Initialize reviewData if it doesn't exist
+    if (!users[userId].reviewData) {
+      users[userId].reviewData = {};
+    }
+    
+    // Initialize dailyShownFlashcards if it doesn't exist
+    if (!users[userId].reviewData.dailyShownFlashcards) {
+      users[userId].reviewData.dailyShownFlashcards = {
+        date: getCurrentDateString(),
+        flashcardIds: []
+      };
+    }
+    
+    const today = getCurrentDateString();
+    const dailyData = users[userId].reviewData.dailyShownFlashcards;
+    
+    // Reset if date has changed
+    if (dailyData.date !== today) {
+      dailyData.date = today;
+      dailyData.flashcardIds = [];
+    }
+    
+    // Add questionId if not already in the list
+    if (!dailyData.flashcardIds.includes(questionId)) {
+      dailyData.flashcardIds.push(questionId);
+    }
+    
+    return saveUsers(users);
+  } catch (error) {
+    console.error('Error marking flashcard as shown today:', error);
+    return false;
+  }
+}

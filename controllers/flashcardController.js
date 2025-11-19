@@ -18,7 +18,7 @@ import {
   composeBatch
 } from '../services/flashcardJsonService.js';
 import { updateReviewSchedule } from '../utils/reviewSchedule.js';
-import { updateUserReviewData, getUserReviewData, startNewSession, getSessionSubtopics, getCompletedSubtopics, isSubtopicDue, markSubtopicCompleted, updateSubtopicReviewDate, markFlashcardAsShown, getShownFlashcards, loadUsers, saveUsers, isDayShiftCompleted, getIncorrectlyAnsweredDueFlashcards, setBatchCompletionTime, getCurrentBatchFlashcards, getPreviousBatchFlashcards, setCurrentBatchFlashcards, addToPreviousBatches, clearCurrentBatch, getBatchCompletionTime, getCurrentBatchIndex, incrementCurrentBatchIndex } from '../services/userService.js';
+import { updateUserReviewData, getUserReviewData, startNewSession, getSessionSubtopics, getCompletedSubtopics, isSubtopicDue, markSubtopicCompleted, updateSubtopicReviewDate, markFlashcardAsShown, getShownFlashcards, loadUsers, saveUsers, isDayShiftCompleted, getIncorrectlyAnsweredDueFlashcards, setBatchCompletionTime, getCurrentBatchFlashcards, getPreviousBatchFlashcards, setCurrentBatchFlashcards, addToPreviousBatches, clearCurrentBatch, getBatchCompletionTime, getCurrentBatchIndex, incrementCurrentBatchIndex, markFlashcardAsShownToday } from '../services/userService.js';
 import { calculateNextReviewDate, getAllDueQuestions, getDueFlashcardSubtopics, calculateSubtopicNextReviewDate } from '../services/spacedRepService.js';
 
 let cachedTopicMap = null;
@@ -367,6 +367,7 @@ export async function getRandomFlashcardJson(req, res) {
         // Increment batch index and mark as shown
         incrementCurrentBatchIndex(userId);
         markFlashcardAsShown(userId, flashcardData.questionId);
+        markFlashcardAsShownToday(userId, flashcardData.questionId);
         
         return res.json(flashcardData);
       }
@@ -396,8 +397,9 @@ export async function getRandomFlashcardJson(req, res) {
           hint: topic?.hint || `Learn fundamental concepts and applications of ${topic ? topic.name : question.topicId}.`
         };
         
-        // Mark this flashcard as shown in the current session to avoid repetition
+        // Mark this flashcard as shown in the current session and today to avoid repetition
         markFlashcardAsShown(userId, flashcardData.questionId);
+        markFlashcardAsShownToday(userId, flashcardData.questionId);
         
         return res.json(flashcardData);
       }
@@ -561,8 +563,9 @@ export async function getRandomFlashcardJson(req, res) {
       }
     }
     
-    // Mark this flashcard as shown in the current session to avoid repetition
+    // Mark this flashcard as shown in the current session and today to avoid repetition
     markFlashcardAsShown(userId, flashcard.questionId);
+    markFlashcardAsShownToday(userId, flashcard.questionId);
     
     return res.json(flashcard);
   } catch (err) {
@@ -795,10 +798,14 @@ export async function submitAnswer(req, res) {
         ? flashcardExistingReview.timesReviewed + 1 
         : 1;
       
+      // Preserve existing difficulty if it exists, otherwise use difficultyForReview
+      // This ensures difficulty consistency - only update if user explicitly rates again
+      const flashcardDifficulty = flashcardExistingReview?.difficulty || difficultyForReview;
+      
       // Store review data for the flashcard with the same nextReviewDate
       // This ensures the flashcard will appear as due when the review date arrives
       updateUserReviewData(userId, flashcardQuestionId, {
-        difficulty: difficultyForReview,
+        difficulty: flashcardDifficulty,
         lastAnswerCorrect: result.correct,
         nextReviewDate: nextReviewDate.toISOString(),
         timesReviewed: flashcardTimesReviewed
@@ -872,8 +879,9 @@ export async function getNextQuestion(req, res) {
         isDueReview: true
       };
       
-      // Mark this flashcard as shown in the current session to avoid repetition
+      // Mark this flashcard as shown in the current session and today to avoid repetition
       markFlashcardAsShown(userId, flashcardData.questionId);
+      markFlashcardAsShownToday(userId, flashcardData.questionId);
       
       return res.json(flashcardData);
     } else {

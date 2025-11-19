@@ -1,5 +1,5 @@
 import { loadQuestionsFromCSV } from './csvQuestionService.js';
-import { getEligibleQuestionIdsForUser, getUserReviewData, getShownFlashcards, loadUsers, saveUsers, getPreviousBatchFlashcards, getCurrentBatchFlashcards } from './userService.js';
+import { getEligibleQuestionIdsForUser, getUserReviewData, getShownFlashcards, loadUsers, saveUsers, getPreviousBatchFlashcards, getCurrentBatchFlashcards, getDailyShownFlashcards } from './userService.js';
 import { getAllDueQuestions } from './spacedRepService.js';
 
 /**
@@ -76,15 +76,42 @@ export function getRandomFlashcard(userId = null, allowedSubtopics = null) {
   
   // If user is authenticated, check for due reviews first (prioritize)
   if (userId) {
-    // Priority 1: Check for due flashcards FIRST, before any filtering
-    // Due flashcards bypass shownFlashcards filter completely
+    // Priority 1: Check for due flashcards FIRST, but filter by shownFlashcards and daily tracking
+    // This prevents duplicates within the same session and same day
     const dueQuestionIds = getAllDueQuestions(userId);
     if (dueQuestionIds.length > 0) {
-      // Get all flashcards that are due (bypass shownFlashcards filter)
-      const dueFlashcards = questionsWithFlashcards.filter(q => dueQuestionIds.includes(q.id));
+      // Get flashcards already shown in this session and today
+      const shownFlashcardIds = getShownFlashcards(userId);
+      const dailyShownFlashcardIds = getDailyShownFlashcards(userId);
+      const shownSet = new Set([...shownFlashcardIds, ...dailyShownFlashcardIds]);
+      
+      // Get all flashcards that are due
+      let dueFlashcards = questionsWithFlashcards.filter(q => dueQuestionIds.includes(q.id));
+      
+      // Filter out already shown flashcards (both session and daily)
+      dueFlashcards = dueFlashcards.filter(q => !shownSet.has(q.id));
+      
+      // Add text-based duplicate detection: track normalized flashcard texts
+      const shownFlashcardTexts = new Set();
+      const shownIds = new Set([...shownFlashcardIds, ...dailyShownFlashcardIds]);
+      
+      // Get normalized texts of already shown flashcards
+      for (const q of questionsWithFlashcards) {
+        if (shownIds.has(q.id) && q.flashcard) {
+          const normalizedText = q.flashcard.trim().toLowerCase().replace(/\s+/g, ' ');
+          shownFlashcardTexts.add(normalizedText);
+        }
+      }
+      
+      // Filter out flashcards with duplicate text
+      dueFlashcards = dueFlashcards.filter(q => {
+        if (!q.flashcard) return false;
+        const normalizedText = q.flashcard.trim().toLowerCase().replace(/\s+/g, ' ');
+        return !shownFlashcardTexts.has(normalizedText);
+      });
       
       if (dueFlashcards.length > 0) {
-        // Return random due flashcard (bypasses shownFlashcards filter)
+        // Return random due flashcard (filtered to prevent duplicates)
         const randomIndex = Math.floor(Math.random() * dueFlashcards.length);
         const question = dueFlashcards[randomIndex];
         const topic = data.topics.find(t => t.id === question.topicId);
@@ -99,16 +126,35 @@ export function getRandomFlashcard(userId = null, allowedSubtopics = null) {
           hint: topic?.hint || `Learn fundamental concepts and applications of ${topic ? topic.name : question.topicId}.`
         };
       }
+      // If all due flashcards have been shown, fall through to Priority 2 (new flashcards)
     }
     
-    // Priority 2: Get new flashcards (not in reviewData, filtered by shownFlashcards)
-    // Get flashcards already shown in this session to avoid repetition
+    // Priority 2: Get new flashcards (not in reviewData, filtered by shownFlashcards and daily tracking)
+    // Get flashcards already shown in this session and today
     const shownFlashcardIds = getShownFlashcards(userId);
+    const dailyShownFlashcardIds = getDailyShownFlashcards(userId);
+    const shownSet = new Set([...shownFlashcardIds, ...dailyShownFlashcardIds]);
     
-    // Filter out already shown flashcards (only for new flashcards, not due ones)
+    // Filter out already shown flashcards (both session and daily)
     let availableFlashcards = questionsWithFlashcards.filter(
-      q => !shownFlashcardIds.includes(q.id)
+      q => !shownSet.has(q.id)
     );
+    
+    // Add text-based duplicate detection: track normalized flashcard texts
+    const shownFlashcardTexts = new Set();
+    for (const q of questionsWithFlashcards) {
+      if (shownSet.has(q.id) && q.flashcard) {
+        const normalizedText = q.flashcard.trim().toLowerCase().replace(/\s+/g, ' ');
+        shownFlashcardTexts.add(normalizedText);
+      }
+    }
+    
+    // Filter out flashcards with duplicate text
+    availableFlashcards = availableFlashcards.filter(q => {
+      if (!q.flashcard) return false;
+      const normalizedText = q.flashcard.trim().toLowerCase().replace(/\s+/g, ' ');
+      return !shownFlashcardTexts.has(normalizedText);
+    });
     
     // If all flashcards are shown, reset and use all (for new session)
     if (availableFlashcards.length === 0) {
@@ -218,10 +264,25 @@ export function composeBatch(userId, batchSize = 6) {
   
   // Priority 1: Collect all past-due flashcards
   // Include both incorrectly answered and correctly answered flashcards where nextReviewDate has arrived
+  // But exclude those already shown in current session or today to prevent duplicates
   const dueFlashcardIds = [];
   const dueSubtopics = new Set();
   const selectedFlashcardIds = new Set(); // Track selected IDs to ensure uniqueness
   const selectedFlashcardTexts = new Set(); // Track selected flashcard texts to prevent duplicates
+  
+  // Get flashcards already shown in this session and today
+  const shownFlashcardIds = getShownFlashcards(userId);
+  const dailyShownFlashcardIds = getDailyShownFlashcards(userId);
+  const shownSet = new Set([...shownFlashcardIds, ...dailyShownFlashcardIds]);
+  
+  // Build set of normalized texts of already shown flashcards
+  const shownFlashcardTexts = new Set();
+  for (const q of allFlashcards) {
+    if (shownSet.has(q.id) && q.flashcard) {
+      const normalizedText = q.flashcard.trim().toLowerCase().replace(/\s+/g, ' ');
+      shownFlashcardTexts.add(normalizedText);
+    }
+  }
   
   // Special keys to skip when iterating reviewData (not applicable when checking by question.id)
   // But we'll use getAllDueQuestions which already handles this correctly
@@ -230,15 +291,25 @@ export function composeBatch(userId, batchSize = 6) {
   
   // Find all past-due flashcards (both incorrect and correct)
   // Use the flashcard questions that are in the due questions list
-  // Past-due flashcards can repeat even if in previous batches or current batch (they're due, so must be reviewed)
+  // Exclude flashcards already shown in current session or today to prevent duplicates
   for (const question of allFlashcards) {
     // Check if this flashcard is due (in the due questions list)
     if (dueQuestionIdsSet.has(question.id)) {
+      // Skip if already shown in current session or today
+      if (shownSet.has(question.id)) {
+        continue;
+      }
+      
       // Normalize flashcard text for comparison
-      const flashcardText = question.flashcard.trim().toLowerCase();
+      const flashcardText = question.flashcard.trim().toLowerCase().replace(/\s+/g, ' ');
+      
+      // Skip if flashcard text already shown (prevents text-based duplicates)
+      if (shownFlashcardTexts.has(flashcardText)) {
+        continue;
+      }
       
       // Check both ID and text uniqueness before adding
-      // Past-due flashcards can repeat even if in previous/current batches
+      // Only add if not already selected in this batch composition
       if (!selectedFlashcardIds.has(question.id) && !selectedFlashcardTexts.has(flashcardText)) {
         dueFlashcardIds.push(question.id);
         selectedFlashcardIds.add(question.id);

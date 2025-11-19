@@ -90,8 +90,8 @@ export function getAllDueQuestions(userId) {
   const now = new Date();
   const dueQuestionIds = [];
 
-  // Skip special keys like flashcardSubtopic, sessionSubtopics, completedSubtopics, shownFlashcards, batchCompletionTime, currentBatchFlashcards, previousBatchFlashcards, currentBatchIndex
-  const specialKeys = ['flashcardSubtopic', 'sessionSubtopics', 'completedSubtopics', 'shownFlashcards', 'batchCompletionTime', 'currentBatchFlashcards', 'previousBatchFlashcards', 'currentBatchIndex'];
+  // Skip special keys like flashcardSubtopic, sessionSubtopics, completedSubtopics, shownFlashcards, batchCompletionTime, currentBatchFlashcards, previousBatchFlashcards, currentBatchIndex, dailyShownFlashcards
+  const specialKeys = ['flashcardSubtopic', 'sessionSubtopics', 'completedSubtopics', 'shownFlashcards', 'batchCompletionTime', 'currentBatchFlashcards', 'previousBatchFlashcards', 'currentBatchIndex', 'dailyShownFlashcards'];
   
   for (const [questionId, review] of Object.entries(reviewData)) {
     // Skip special keys
