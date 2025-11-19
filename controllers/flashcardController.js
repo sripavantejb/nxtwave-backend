@@ -251,9 +251,47 @@ export async function startSession(req, res) {
       batch.subtopics = pickRandomSubtopics(6);
     }
     
-    // Store batch IDs if available
+    // Store batch IDs if available, but filter out flashcards already shown today
     if (batch.flashcardIds && batch.flashcardIds.length > 0) {
-      setCurrentBatchFlashcards(userId, batch.flashcardIds);
+      // Get flashcards already shown today
+      const dailyShownFlashcardIds = getDailyShownFlashcards(userId);
+      const dailyShownSet = new Set(dailyShownFlashcardIds);
+      
+      // Build set of normalized texts of already shown flashcards today
+      const data = loadQuestions();
+      const allQuestionsWithFlashcards = data.questions.filter(
+        q => q.flashcard && q.flashcard.trim() !== ''
+      );
+      const dailyShownFlashcardTexts = new Set();
+      for (const q of allQuestionsWithFlashcards) {
+        if (dailyShownSet.has(q.id) && q.flashcard) {
+          const normalizedText = q.flashcard.trim().toLowerCase().replace(/\s+/g, ' ');
+          dailyShownFlashcardTexts.add(normalizedText);
+        }
+      }
+      
+      // Filter batch to exclude flashcards already shown today
+      const filteredBatchIds = batch.flashcardIds.filter(flashcardId => {
+        const question = data.questions.find(q => q.id === flashcardId);
+        if (!question || !question.flashcard) return false;
+        
+        // Skip if already shown today by ID
+        if (dailyShownSet.has(flashcardId)) return false;
+        
+        // Skip if already shown today by text
+        const normalizedText = question.flashcard.trim().toLowerCase().replace(/\s+/g, ' ');
+        if (dailyShownFlashcardTexts.has(normalizedText)) return false;
+        
+        return true;
+      });
+      
+      // Only store batch if we have valid flashcards
+      if (filteredBatchIds.length > 0) {
+        setCurrentBatchFlashcards(userId, filteredBatchIds);
+      } else {
+        // All flashcards in batch were already shown today - clear batch
+        clearCurrentBatch(userId);
+      }
     }
     
     // Store session in user's reviewData (this also resets shownFlashcards)
@@ -347,29 +385,81 @@ export async function getRandomFlashcardJson(req, res) {
         return res.json({ allCompleted: true, message: 'Batch completed', sessionSubtopics: [] });
       }
       
-      // Serve next flashcard from batch
-      const flashcardId = currentBatchFlashcards[currentBatchIndex];
-      const data = loadQuestions();
-      const question = data.questions.find(q => q.id === flashcardId);
+      // Get flashcards already shown today to prevent duplicates
+      const dailyShownFlashcardIds = getDailyShownFlashcards(userId);
+      const dailyShownSet = new Set(dailyShownFlashcardIds);
       
-      if (question && question.flashcard && question.flashcard.trim() !== '') {
-        const topic = data.topics.find(t => t.id === question.topicId);
-        const flashcardData = {
-          questionId: question.id,
-          flashcard: question.flashcard,
-          flashcardAnswer: question.flashcardAnswer || '',
-          topic: topic ? topic.name : question.topicId,
-          subTopic: question.subTopic || topic?.name || question.topicId,
-          topicId: question.topicId,
-          hint: topic?.hint || `Learn fundamental concepts and applications of ${topic ? topic.name : question.topicId}.`
-        };
+      // Build set of normalized texts of already shown flashcards today
+      const data = loadQuestions();
+      const allQuestionsWithFlashcards = data.questions.filter(
+        q => q.flashcard && q.flashcard.trim() !== ''
+      );
+      const dailyShownFlashcardTexts = new Set();
+      for (const q of allQuestionsWithFlashcards) {
+        if (dailyShownSet.has(q.id) && q.flashcard) {
+          const normalizedText = q.flashcard.trim().toLowerCase().replace(/\s+/g, ' ');
+          dailyShownFlashcardTexts.add(normalizedText);
+        }
+      }
+      
+      // Find next flashcard in batch that hasn't been shown today
+      let flashcardData = null;
+      let nextIndex = currentBatchIndex;
+      
+      while (nextIndex < currentBatchFlashcards.length) {
+        const flashcardId = currentBatchFlashcards[nextIndex];
+        const question = data.questions.find(q => q.id === flashcardId);
         
-        // Increment batch index and mark as shown
-        incrementCurrentBatchIndex(userId);
+        if (question && question.flashcard && question.flashcard.trim() !== '') {
+          // Check if already shown today by ID
+          if (dailyShownSet.has(flashcardId)) {
+            nextIndex++;
+            continue; // Skip this one, try next
+          }
+          
+          // Check if already shown today by text (normalized)
+          const normalizedText = question.flashcard.trim().toLowerCase().replace(/\s+/g, ' ');
+          if (dailyShownFlashcardTexts.has(normalizedText)) {
+            nextIndex++;
+            continue; // Skip this one, try next
+          }
+          
+          // This flashcard is valid - use it
+          const topic = data.topics.find(t => t.id === question.topicId);
+          flashcardData = {
+            questionId: question.id,
+            flashcard: question.flashcard,
+            flashcardAnswer: question.flashcardAnswer || '',
+            topic: topic ? topic.name : question.topicId,
+            subTopic: question.subTopic || topic?.name || question.topicId,
+            topicId: question.topicId,
+            hint: topic?.hint || `Learn fundamental concepts and applications of ${topic ? topic.name : question.topicId}.`
+          };
+          break;
+        }
+        
+        nextIndex++;
+      }
+      
+      // If we found a valid flashcard, serve it
+      if (flashcardData) {
+        // Update batch index to skip over any duplicates we found
+        // Set index to nextIndex + 1 so next call will check the next flashcard
+        const users = loadUsers();
+        if (users[userId] && users[userId].reviewData) {
+          users[userId].reviewData.currentBatchIndex = nextIndex + 1;
+          saveUsers(users);
+        }
+        
+        // Mark as shown
         markFlashcardAsShown(userId, flashcardData.questionId);
         markFlashcardAsShownToday(userId, flashcardData.questionId);
         
         return res.json(flashcardData);
+      } else {
+        // All flashcards in batch were already shown today - clear batch and fall through to other priorities
+        clearCurrentBatch(userId);
+        // Fall through to Priority 1 (due reviews) or Priority 2 (new flashcards)
       }
     }
     
