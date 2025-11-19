@@ -259,17 +259,8 @@ export function composeBatch(userId, batchSize = 6) {
   const currentBatchFlashcards = getCurrentBatchFlashcards(userId);
   const currentBatchSet = new Set(currentBatchFlashcards || []);
   
-  // Combine previous and current batches into exclusion set (by ID)
+  // Combine previous and current batches into exclusion set
   const excludedBatchSet = new Set([...previousBatchFlashcards, ...(currentBatchFlashcards || [])]);
-  
-  // Build set of normalized texts from previous and current batches (prevent text-based duplicates across batches)
-  const excludedBatchTexts = new Set();
-  for (const q of allFlashcards) {
-    if (excludedBatchSet.has(q.id) && q.flashcard) {
-      const normalizedText = q.flashcard.trim().toLowerCase().replace(/\s+/g, ' ');
-      excludedBatchTexts.add(normalizedText);
-    }
-  }
   
   // Priority 1: Collect all past-due flashcards
   // Include both incorrectly answered and correctly answered flashcards where nextReviewDate has arrived
@@ -317,13 +308,6 @@ export function composeBatch(userId, batchSize = 6) {
         continue;
       }
       
-      // Skip if flashcard text appeared in previous or current batches (prevents text-based duplicates across batches)
-      // Note: Due flashcards can repeat across batches if they're due, but we prevent same text from appearing
-      // in consecutive batches to avoid user confusion
-      if (excludedBatchTexts.has(flashcardText)) {
-        continue;
-      }
-      
       // Check both ID and text uniqueness before adding
       // Only add if not already selected in this batch composition
       if (!selectedFlashcardIds.has(question.id) && !selectedFlashcardTexts.has(flashcardText)) {
@@ -358,18 +342,13 @@ export function composeBatch(userId, batchSize = 6) {
       }
       
       // Skip if flashcard text already selected (prevents duplicates)
-      const flashcardText = question.flashcard.trim().toLowerCase().replace(/\s+/g, ' ');
+      const flashcardText = question.flashcard.trim().toLowerCase();
       if (selectedFlashcardTexts.has(flashcardText)) {
         return false;
       }
       
       // Skip if in previous batches or current batch (for new flashcards only, past-due can repeat)
       if (excludedBatchSet.has(question.id)) {
-        return false;
-      }
-      
-      // Skip if flashcard text appeared in previous or current batches (prevents text-based duplicates across batches)
-      if (excludedBatchTexts.has(flashcardText)) {
         return false;
       }
       
@@ -480,9 +459,6 @@ export function composeBatch(userId, batchSize = 6) {
       
       // Skip if in previous batches (for new flashcards)
       if (excludedBatchSet.has(question.id)) continue;
-      
-      // Skip if flashcard text appeared in previous or current batches (prevents text-based duplicates across batches)
-      if (excludedBatchTexts.has(normalizedText)) continue;
       
       // Check if it's a new flashcard (not in reviewData) or due
       const review = reviewData[question.id];
