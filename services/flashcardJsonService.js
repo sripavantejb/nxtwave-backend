@@ -400,12 +400,89 @@ export function composeBatch(userId, batchSize = 6) {
   const allFlashcardIds = [...limitedDueFlashcardIds, ...newFlashcardIds];
   const allSubtopics = Array.from(new Set([...dueSubtopics, ...newSubtopics]));
   
-  // Ensure exactly batchSize flashcard IDs
-  const finalFlashcardIds = allFlashcardIds.slice(0, batchSize);
+  // Final deduplication: Remove duplicates by normalized flashcard text
+  // This ensures no duplicate flashcard texts appear in the batch, even if they have different IDs
+  const deduplicatedFlashcardIds = [];
+  const seenTexts = new Set();
+  const seenIds = new Set();
+  
+  for (const flashcardId of allFlashcardIds) {
+    const question = allFlashcards.find(q => q.id === flashcardId);
+    if (!question || !question.flashcard) continue;
+    
+    // Normalize flashcard text for comparison
+    const normalizedText = question.flashcard.trim().toLowerCase().replace(/\s+/g, ' ');
+    
+    // Skip if we've already seen this ID (shouldn't happen, but safety check)
+    if (seenIds.has(flashcardId)) {
+      continue;
+    }
+    
+    // Skip if we've already seen this flashcard text (prevents text-based duplicates)
+    if (seenTexts.has(normalizedText)) {
+      continue;
+    }
+    
+    // This flashcard is unique - add it
+    deduplicatedFlashcardIds.push(flashcardId);
+    seenIds.add(flashcardId);
+    seenTexts.add(normalizedText);
+    
+    // Stop if we've reached batch size
+    if (deduplicatedFlashcardIds.length >= batchSize) {
+      break;
+    }
+  }
+  
+  // If batch is smaller than batchSize after deduplication, fill remaining slots
+  if (deduplicatedFlashcardIds.length < batchSize) {
+    const remainingSlots = batchSize - deduplicatedFlashcardIds.length;
+    
+    // Find additional unique flashcards that haven't been selected
+    for (const question of allFlashcards) {
+      if (deduplicatedFlashcardIds.length >= batchSize) break;
+      
+      // Skip if already in batch
+      if (seenIds.has(question.id)) continue;
+      
+      // Normalize flashcard text
+      const normalizedText = question.flashcard.trim().toLowerCase().replace(/\s+/g, ' ');
+      
+      // Skip if flashcard text already in batch
+      if (seenTexts.has(normalizedText)) continue;
+      
+      // Skip if already shown today or in session
+      if (shownSet.has(question.id)) continue;
+      
+      // Skip if flashcard text already shown
+      if (shownFlashcardTexts.has(normalizedText)) continue;
+      
+      // Skip if in previous batches (for new flashcards)
+      if (excludedBatchSet.has(question.id)) continue;
+      
+      // Check if it's a new flashcard (not in reviewData) or due
+      const review = reviewData[question.id];
+      const isNew = !review;
+      const isDue = dueQuestionIdsSet.has(question.id);
+      
+      // Only include if it's new or due (not scheduled for future)
+      if (isNew || isDue) {
+        deduplicatedFlashcardIds.push(question.id);
+        seenIds.add(question.id);
+        seenTexts.add(normalizedText);
+        if (question.subTopic && question.subTopic.trim() !== '') {
+          allSubtopics.push(question.subTopic.trim());
+        }
+      }
+    }
+  }
+  
+  // Ensure exactly batchSize flashcard IDs (or fewer if not enough unique flashcards available)
+  const finalFlashcardIds = deduplicatedFlashcardIds.slice(0, batchSize);
   
   return {
     flashcardIds: finalFlashcardIds,
-    subtopics: allSubtopics.slice(0, batchSize) // Limit subtopics to batch size
+    subtopics: Array.from(new Set(allSubtopics)).slice(0, batchSize) // Limit subtopics to batch size
   };
 }
 
